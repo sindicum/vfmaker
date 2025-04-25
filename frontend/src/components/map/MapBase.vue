@@ -1,0 +1,102 @@
+<script setup lang="ts">
+import { onMounted, onUnmounted, watch, inject, shallowRef } from 'vue'
+import { Map as MaplibreMapObject, NavigationControl } from 'maplibre-gl'
+import { useStore, usePersistStore } from '@/stores/store'
+
+import 'maplibre-gl/dist/maplibre-gl.css'
+import type { MaplibreRef } from '@/types/maplibre'
+
+const store = useStore()
+const persistStore = usePersistStore()
+
+const mapStyleProperty = [
+  {
+    name: 'Open Street Map',
+    url: 'https://tile.openstreetmap.jp/styles/maptiler-basic-ja/style.json',
+  },
+  {
+    name: 'MapTiler',
+    url: `https://api.maptiler.com/maps/hybrid/style.json?key=${import.meta.env.VITE_MAPTILER_KEY}`,
+  },
+]
+
+const mapContainer = shallowRef<HTMLDivElement | null>(null)
+const map = inject<MaplibreRef>('mapkey')
+if (!map) throw new Error('Map instance not provided')
+
+onMounted(() => {
+  const container = mapContainer.value
+  if (!container) return
+
+  const mapStyleIndex = store.mapStyleIndex
+  map.value = new MaplibreMapObject({
+    container: container,
+    style: mapStyleProperty[mapStyleIndex].url,
+    center: [persistStore.centerPosition.lng, persistStore.centerPosition.lat],
+    zoom: persistStore.centerPosition.zoom,
+    hash: true,
+  })
+
+  map.value.addControl(new NavigationControl())
+  store.mapLoaded = true
+  map.value.on('moveend', setMapPosition)
+})
+
+watch(
+  () => store.mapStyleIndex,
+  () => {
+    const mapInstance = map?.value
+    if (!mapInstance) return
+
+    // スタイルを変更
+    const mapStyleIndex = store.mapStyleIndex
+    mapInstance.setStyle(mapStyleProperty[mapStyleIndex].url, { diff: true })
+  },
+)
+onUnmounted(() => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  mapInstance.off('moveend', setMapPosition)
+  mapInstance.remove()
+})
+
+function setMapPosition() {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  const center = mapInstance.getCenter()
+  const zoom = mapInstance.getZoom()
+
+  persistStore.centerPosition.lat = Math.round(center.lat * 100) / 100
+  persistStore.centerPosition.lng = Math.round(center.lng * 100) / 100
+  persistStore.centerPosition.zoom = Math.round(zoom * 100) / 100
+}
+</script>
+
+<template>
+  <div ref="mapContainer" class="h-full w-full">
+    <div class="absolute top-2 left-2 p-4 rounded-md bg-white/90 z-10 border border-gray-300">
+      <fieldset role="radiogroup">
+        <div class="space-y-2">
+          <label
+            class="relative flex items-start"
+            v-for="(map_style, index) in mapStyleProperty"
+            :key="map_style.name"
+          >
+            <div class="flex h-6 items-center">
+              <input
+                type="radio"
+                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                v-model="store.mapStyleIndex"
+                :value="index"
+                role="radio"
+              />
+            </div>
+            <div class="ml-3 text-sm leading-6 text-gray-900">
+              {{ map_style.name }}
+            </div>
+          </label>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</template>
