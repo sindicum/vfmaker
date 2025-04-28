@@ -35,7 +35,6 @@ export function useDeleteLayerHandler(map: MaplibreRef) {
   function clickDeleteFillLayer(e: MapMouseEvent) {
     const mapInstance = map?.value
     if (!mapInstance) return
-
     const feature = e.features?.[0]
     if (!feature || !feature.properties?.id) return
 

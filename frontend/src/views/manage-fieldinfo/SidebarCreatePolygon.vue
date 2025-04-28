@@ -46,32 +46,14 @@ const selectedDialog = (selected: boolean) => {
     isOpenDialog.value = false
   }
 }
-
-const onClickTopBtn = () => {
-  createPolygonActive.value = true
-  draw.value?.setMode('polygon')
-}
 </script>
 
 <template>
-  <button
-    type="button"
-    @click="onClickTopBtn"
-    :class="[
-      createPolygonActive
-        ? 'bg-slate-200 text-slate-500 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm text-center'
-        : 'bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm',
-    ]"
-    v-bind:disabled="createPolygonActive"
-  >
-    ポリゴンの新規作成
-  </button>
-  <div v-show="createPolygonActive" class="flex flex-col gap-4">
-    <div class="w-full border-t border-slate-800"></div>
+  <div class="flex flex-row md:flex-col gap-4 text-sm sm:text-base">
     <button
       type="button"
       @click="exitCreatePolygon()"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!createPolygonActive"
     >
       編集モード終了

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePersistStore, useStore } from '@/stores/store'
-import { addEditLayer, removeLayer } from './handler/LayerHandler'
+import { addEditLayer } from './handler/LayerHandler'
 
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'
@@ -64,35 +64,14 @@ function updateClearEditLayer() {
 function updateExitEdit() {
   updatePolygonActive.value = false
 }
-const onClickTopBtn = () => {
-  const mapInstance = map?.value
-  if (!mapInstance) return
-
-  updatePolygonActive.value = true
-  removeLayer(mapInstance)
-  addEditLayer(mapInstance)
-}
 </script>
 
 <template>
-  <button
-    type="button"
-    @click="onClickTopBtn"
-    :class="[
-      updatePolygonActive
-        ? 'bg-slate-200 text-slate-500 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm text-center'
-        : 'bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm',
-    ]"
-    v-bind:disabled="updatePolygonActive"
-  >
-    ポリゴンの更新
-  </button>
-  <div v-show="updatePolygonActive" class="flex flex-col gap-4">
-    <div class="w-full border-t border-slate-800"></div>
+  <div class="flex flex-row md:flex-col gap-4 text-sm sm:text-base">
     <button
       type="button"
       @click="updateRegisteredPolygon"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!updatePolygonActive"
     >
       更新実行
@@ -100,7 +79,7 @@ const onClickTopBtn = () => {
     <button
       type="button"
       @click="updateClearEditLayer"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!updatePolygonActive"
     >
       選択クリア
@@ -108,7 +87,7 @@ const onClickTopBtn = () => {
     <button
       type="button"
       @click="updateExitEdit"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!updatePolygonActive"
     >
       編集モード終了

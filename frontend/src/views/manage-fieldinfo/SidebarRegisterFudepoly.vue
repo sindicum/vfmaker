@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { useStore, usePersistStore } from '@/stores/store'
-import {
-  addPMtiles,
-  addPMTilesSourceLayer,
-  removePMTitlesSourceLayer,
-} from './handler/LayerHandler'
+import { addPMTilesSourceLayer, removePMTitlesSourceLayer } from './handler/LayerHandler'
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'
 
@@ -61,21 +57,6 @@ function exitFudepolyEdit() {
   removePMTitlesSourceLayer(mapInstance)
 }
 
-// メニューボタンのクリック処理
-const onClickTopBtn = () => {
-  if (!map.value) {
-    console.error(MESSAGE.MAP_NOT_READY)
-    return
-  }
-  if (!draw.value) {
-    console.error(MESSAGE.DRAW_NOT_READY)
-    return
-  }
-
-  registerFudepolyActive.value = true
-  addPMtiles(map.value, draw.value)
-}
-
 // Draw描画オブジェクトを取得
 function getDrawFeature(): Feature<Polygon> | null {
   const snapshot = draw.value?.getSnapshot()
@@ -88,25 +69,11 @@ function getDrawFeature(): Feature<Polygon> | null {
 </script>
 
 <template>
-  <button
-    type="button"
-    @click="onClickTopBtn"
-    class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
-    :class="[
-      registerFudepolyActive
-        ? 'bg-slate-200 text-slate-500 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm text-center'
-        : 'bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm',
-    ]"
-    v-bind:disabled="registerFudepolyActive"
-  >
-    筆ポリゴンからの登録
-  </button>
-  <div v-show="registerFudepolyActive" class="flex flex-col gap-4">
-    <div class="w-full border-t border-slate-800"></div>
+  <div class="flex flex-row md:flex-col gap-4 text-sm sm:text-base">
     <button
       type="button"
       @click="registerFudepoly"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!registerFudepolyActive"
     >
       登録実行
@@ -114,7 +81,7 @@ function getDrawFeature(): Feature<Polygon> | null {
     <button
       type="button"
       @click="clearFudepolyLayer"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!registerFudepolyActive"
     >
       選択クリア
@@ -122,7 +89,7 @@ function getDrawFeature(): Feature<Polygon> | null {
     <button
       type="button"
       @click="exitFudepolyEdit"
-      class="bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!registerFudepolyActive"
     >
       編集モード終了

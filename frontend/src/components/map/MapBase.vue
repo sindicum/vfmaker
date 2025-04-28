@@ -2,12 +2,14 @@
 import { onMounted, onUnmounted, watch, inject, shallowRef } from 'vue'
 import { Map as MaplibreMapObject, NavigationControl } from 'maplibre-gl'
 import { useStore, usePersistStore } from '@/stores/store'
+import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { MaplibreRef } from '@/types/maplibre'
 
 const store = useStore()
 const persistStore = usePersistStore()
+const { isDesktop } = useControlScreenWidth()
 
 const mapStyleProperty = [
   {
@@ -37,7 +39,7 @@ onMounted(() => {
     hash: true,
   })
 
-  map.value.addControl(new NavigationControl())
+  map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
   store.mapLoaded = true
   map.value.on('moveend', setMapPosition)
 })
@@ -73,10 +75,12 @@ function setMapPosition() {
 </script>
 
 <template>
-  <div ref="mapContainer" class="h-full w-full">
-    <div class="absolute top-2 left-2 p-4 rounded-md bg-white/90 z-10 border border-gray-300">
+  <div ref="mapContainer" class="relative h-full w-full">
+    <div
+      class="absolute bottom-10 md:top-2 right-2 md:left-2 px-3 py-1 md:p-4 h-fit w-fit rounded-3xl md:rounded-md bg-white/90 z-10"
+    >
       <fieldset role="radiogroup">
-        <div class="space-y-2">
+        <div class="grid grid-cols-2 md:grid-cols-1 gap-2">
           <label
             class="relative flex items-start"
             v-for="(map_style, index) in mapStyleProperty"

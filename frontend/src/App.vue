@@ -2,7 +2,7 @@
 import { shallowRef, provide } from 'vue'
 import { RouterView } from 'vue-router'
 
-import Header from '@/components/layout/HeaderComp.vue'
+import Header from '@/components/header/HeaderComp.vue'
 import Alert from '@/components/AlertComp.vue'
 
 import type { MaplibreMap } from '@/types/maplibre'
