@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import { useStore, usePersistStore } from '@/stores/store'
+import Dialog from '@/components/DialogComp.vue'
 
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 const persistStore = usePersistStore()
@@ -9,6 +11,7 @@ const store = useStore()
 const map = defineModel<MaplibreMap>('map')
 const deletePolygonId = defineModel<string>('deletePolygonId')
 const deletePolygonActive = defineModel<boolean>('deletePolygonActive')
+const isOpenDialog = ref<boolean>(false)
 
 const { isDesktop } = useControlScreenWidth()
 
@@ -43,18 +46,37 @@ function deleteAllPolygon() {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  persistStore.clearFeatureCollection()
-  const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-  if (source) {
-    source.setData(persistStore.featurecollection)
+  const featuresLength = persistStore.featurecollection.features.length
+
+  if (featuresLength === 0) {
+    store.alertMessage.alertType = 'Error'
+    store.alertMessage.message = `ポリゴンがありません`
+    return
   }
-  store.alertMessage.alertType = 'Info'
-  store.alertMessage.message = `ポリゴンをすべて削除しました`
+
+  isOpenDialog.value = true
 }
 
 // 編集モード終了
 function deleteExitEdit() {
   deletePolygonActive.value = false
+}
+
+const selectedDialog = (selected: boolean) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (selected) {
+    persistStore.clearFeatureCollection()
+    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
+    if (source) {
+      source.setData(persistStore.featurecollection)
+    }
+    store.alertMessage.alertType = 'Info'
+    store.alertMessage.message = `ポリゴンをすべて削除しました`
+  }
+
+  isOpenDialog.value = false
 }
 </script>
 
@@ -66,7 +88,7 @@ function deleteExitEdit() {
       class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!deletePolygonActive"
     >
-      選択したポリゴンの<br v-if="!isDesktop" />削除
+      選択した<br v-if="!isDesktop" />ポリゴンの削除
     </button>
     <button
       type="button"
@@ -74,7 +96,7 @@ function deleteExitEdit() {
       class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!deletePolygonActive"
     >
-      ポリゴンの全削除
+      ポリゴンの<br v-if="!isDesktop" />全削除
     </button>
     <button
       type="button"
@@ -85,4 +107,7 @@ function deleteExitEdit() {
       編集モード終了
     </button>
   </div>
+
+  <!-- 全削除を選択したときにダイアログを表示 -->
+  <Dialog message="本当に削除しますか" :isOpen="isOpenDialog!" @selected="selectedDialog" />
 </template>

@@ -12,7 +12,6 @@ import { addSource, addLayer, setupTerraDraw } from './handler/LayerHandler'
 import { useDrawHandler } from './handler/useDrawHandler'
 import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
 import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
-
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
 import type { Draw, MaplibreRef } from '@/types/maplibre'
@@ -21,6 +20,7 @@ import { addPMtiles, addEditLayer, removeLayer } from './handler/LayerHandler'
 const store = useStore()
 const persistStore = usePersistStore()
 const { isDesktop } = useControlScreenWidth()
+
 const map = inject<MaplibreRef>('mapkey')
 if (!map) throw new Error('Map instance not provided')
 

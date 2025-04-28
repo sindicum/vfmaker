@@ -15,6 +15,7 @@ import {
 } from './handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
+import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
 import type { MapMouseEvent, MaplibreRef } from '@/types/maplibre'
 type StepStatus = 'upcoming' | 'current' | 'complete'
@@ -24,6 +25,7 @@ if (!map) throw new Error('Map instance not provided')
 
 const store = useStore()
 const persistStore = usePersistStore()
+const { isDesktop } = useControlScreenWidth()
 
 const step1Status = ref<StepStatus>('current')
 const step2Status = ref<StepStatus>('upcoming')
@@ -164,9 +166,17 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
 </script>
 
 <template>
-  <main class="flex h-[calc(100vh-4rem)] w-screen">
+  <main class="md:flex h-[calc(100vh-4rem)] w-screen">
     <!-- sidebar -->
-    <div class="block min-w-84 max-w-96 bg-slate-100 h-full p-8">
+    <!-- <div class="block min-w-84 max-w-96 bg-slate-100 h-full p-8"> -->
+    <div
+      :class="[
+        isDesktop
+          ? 'p-8 h-full bg-slate-100 min-w-84'
+          : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
+        'block z-10',
+      ]"
+    >
       <div class="mt-2 mb-6 font-semibold text-center">可変施肥マップの作成</div>
       <ol role="list" class="divide-y divide-gray-300 rounded-md border border-gray-300">
         <li>
