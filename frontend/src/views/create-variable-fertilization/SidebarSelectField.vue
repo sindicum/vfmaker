@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { watch } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 const step1Status = defineModel('step1Status')
 const { isDesktop } = useControlScreenWidth()
-
-watch(isDesktop, (newVal) => {
-  console.log(newVal)
-})
 </script>
 
 <template>

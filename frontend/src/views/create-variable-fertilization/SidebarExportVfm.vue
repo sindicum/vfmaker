@@ -5,6 +5,7 @@ import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useStore } from '@/stores/store'
 import type { dialogType } from '@/types/maplibre'
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+
 const currentDialogName = ref<dialogType>('')
 const store = useStore()
 
@@ -39,6 +40,7 @@ const returnStep2 = () => {
 // 可変施肥マップの出力
 async function exportVfm() {
   const url = import.meta.env.VITE_API_URL
+  store.isLoading = true
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -66,6 +68,7 @@ async function exportVfm() {
     store.alertMessage.alertType = 'Info'
     store.alertMessage.message = '可変施肥マップを出力しました'
   }
+  store.isLoading = false
 }
 </script>
 

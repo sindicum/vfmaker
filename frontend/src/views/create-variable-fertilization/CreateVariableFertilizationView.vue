@@ -144,7 +144,6 @@ async function mapClickHandler(e: MapMouseEvent) {
   // エディット中は他の圃場操作を受け付けない
   if (isInEdit.value) return
   isInEdit.value = true
-
   await onClickField(e).catch((error) => {
     store.alertMessage.message = error
   })

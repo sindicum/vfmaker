@@ -13,6 +13,7 @@ export const useStore = defineStore('store', () => {
   const currentPage = ref(0)
   const mapLoaded = ref(false)
   const mapStyleIndex = ref(0)
+  const isLoading = ref(false)
 
   const setMessage = (alertType: alertType, message: string) => {
     alertMessage.value.alertType = alertType
@@ -23,6 +24,7 @@ export const useStore = defineStore('store', () => {
     alertMessage,
     currentPage,
     mapStyleIndex,
+    isLoading,
     setMessage,
   }
 })
