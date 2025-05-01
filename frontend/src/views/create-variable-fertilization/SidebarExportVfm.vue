@@ -4,7 +4,7 @@ import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useStore } from '@/stores/store'
 import type { dialogType } from '@/types/maplibre'
-
+import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 const currentDialogName = ref<dialogType>('')
 const store = useStore()
 
@@ -12,6 +12,8 @@ const step3Status = defineModel('step3Status')
 const baseFertilizationAmount = defineModel('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
 const applicationGridFeatures = defineModel('applicationGridFeatures')
+
+const { isDesktop } = useControlScreenWidth()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
@@ -74,61 +76,73 @@ async function exportVfm() {
     v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
   />
 
-  <StepStatusHeader
-    id="3"
-    name="施肥量の決定とファイル出力"
-    v-model:current-step-status="step3Status"
-  />
+  <div v-if="isDesktop || step3Status === 'current'" class="grid-cols-1 grid items-center">
+    <StepStatusHeader
+      id="3"
+      name="施肥量の決定とファイル出力"
+      v-model:current-step-status="step3Status"
+    />
 
-  <div
-    :class="[
-      step3Status === 'current'
-        ? 'max-h-96 transition-all duration-500 overflow-auto'
-        : 'max-h-0 transition-all duration-500 overflow-hidden',
-      'px-5',
-    ]"
-  >
-    <div class="text-rose-600 my-4">基準施肥量および可変量を入力</div>
-    <div class="grid grid-cols-[7fr_2fr_4fr] gap-y-3 items-center">
-      <label>基準施肥量</label>
-      <input
+    <div
+      :class="[
+        step3Status === 'current' ? 'max-h-96  overflow-auto' : 'max-h-0  overflow-hidden',
+        'px-5 transition-all duration-500',
+      ]"
+    >
+      <div class="text-rose-600 my-4">基準施肥量および可変量を入力</div>
+
+      <div
         :class="[
-          currentDialogName === 'baseFertilizationAmount' ? ' bg-amber-300' : 'bg-white',
-          'w-10 mr-1 rounded-md border',
+          isDesktop
+            ? 'grid-cols-[7fr_2fr_4fr] col-span-1 gap-y-3'
+            : 'grid-cols-[7fr_3fr_7fr_3fr] col-span-2 gap-y-1',
+          'grid  items-center',
         ]"
-        @click="onClickDialog('baseFertilizationAmount')"
-        type="button"
-        v-model="baseFertilizationAmount"
-      />
-      <span>kg/10a</span>
-      <label>可変施肥増減率(%)</label>
-      <input
-        :class="[
-          currentDialogName === 'variableFertilizationRangeRate' ? ' bg-amber-300' : 'bg-white',
-          'w-10 mr-1 rounded-md border',
-        ]"
-        @click="onClickDialog('variableFertilizationRangeRate')"
-        type="button"
-        v-model="variableFertilizationRangeRate"
-      />
-      <input
-        class="w-full"
-        type="range"
-        :min="gridParams.variableFertilizationRangeRate.min"
-        :max="gridParams.variableFertilizationRangeRate.max"
-        v-model="variableFertilizationRangeRate"
-      />
-    </div>
-    <div class="grid grid-cols-2 gap-3 justify-center my-4">
-      <button class="p-2 rounded-md bg-white ring-1 ring-inset ring-gray-300" @click="returnStep2">
-        戻る
-      </button>
-      <button
-        class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
-        @click="endStep"
       >
-        <span>ファイル出力</span>
-      </button>
+        <label>基準施肥量<span v-show="!isDesktop">kg/10a</span></label>
+        <input
+          :class="[
+            currentDialogName === 'baseFertilizationAmount' ? ' bg-amber-300' : 'bg-white',
+            'w-10 mr-1 rounded-md border',
+          ]"
+          @click="onClickDialog('baseFertilizationAmount')"
+          type="button"
+          v-model="baseFertilizationAmount"
+        />
+        <span v-show="isDesktop">kg/10a</span>
+        <label>可変施肥増減率(%)</label>
+        <input
+          :class="[
+            currentDialogName === 'variableFertilizationRangeRate' ? ' bg-amber-300' : 'bg-white',
+            'w-10 mr-1 rounded-md border',
+          ]"
+          @click="onClickDialog('variableFertilizationRangeRate')"
+          type="button"
+          v-model="variableFertilizationRangeRate"
+        />
+        <input
+          v-show="isDesktop"
+          class="w-full"
+          type="range"
+          :min="gridParams.variableFertilizationRangeRate.min"
+          :max="gridParams.variableFertilizationRangeRate.max"
+          v-model="variableFertilizationRangeRate"
+        />
+      </div>
+      <div class="grid grid-cols-2 gap-3 justify-center my-4">
+        <button
+          class="p-2 rounded-md bg-white ring-1 ring-inset ring-gray-300"
+          @click="returnStep2"
+        >
+          戻る
+        </button>
+        <button
+          class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
+          @click="endStep"
+        >
+          <span>ファイル出力</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>

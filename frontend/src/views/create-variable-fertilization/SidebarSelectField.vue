@@ -1,20 +1,26 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
-
+import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 const step1Status = defineModel('step1Status')
+const { isDesktop } = useControlScreenWidth()
+
+watch(isDesktop, (newVal) => {
+  console.log(newVal)
+})
 </script>
 
 <template>
-  <StepStatusHeader id="1" name="圃場の選択" v-model:current-step-status="step1Status" />
+  <div v-if="isDesktop || step1Status === 'current'" class="grid-cols-1 grid items-center">
+    <StepStatusHeader id="1" name="圃場の選択" v-model:current-step-status="step1Status" />
 
-  <div
-    :class="[
-      step1Status === 'current'
-        ? 'max-h-96 transition-all duration-500 overflow-auto'
-        : 'max-h-0 transition-all duration-500 overflow-hidden',
-      'px-5',
-    ]"
-  >
-    <div class="text-rose-600 my-4">地図から圃場を選択</div>
+    <div
+      :class="[
+        step1Status === 'current' ? 'max-h-96  overflow-auto' : 'max-h-0  overflow-hidden',
+        'px-5 transition-all duration-500',
+      ]"
+    >
+      <div class="text-rose-600 my-4">地図から圃場を選択</div>
+    </div>
   </div>
 </template>

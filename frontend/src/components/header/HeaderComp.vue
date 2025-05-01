@@ -30,8 +30,8 @@ const navigation: {
     <nav
       v-if="isDesktop || isOpenMenu"
       :class="[
-        isDesktop ? 'flex-row' : 'absolute top-16 flex-col z-20 bg-slate-800/60',
-        'flex right-0',
+        isDesktop ? 'flex-row' : 'absolute top-16 flex-col  bg-slate-800/60',
+        'flex right-0 z-30',
       ]"
     >
       <RouterLink

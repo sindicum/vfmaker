@@ -127,7 +127,7 @@ const closeDialog = () => {
 </script>
 
 <template>
-  <div v-show="dialogName !== ''" class="absolute top-0 left-0 w-screen h-screen bg-black/50 z-50">
+  <div v-show="dialogName !== ''" class="fixed top-0 left-0 w-screen h-screen bg-black/50">
     <div class="flex h-full items-center justify-center">
       <div class="relative w-72 bg-white rounded-md p-5 text-center">
         <div class="mt-2">数値を入力してください</div>

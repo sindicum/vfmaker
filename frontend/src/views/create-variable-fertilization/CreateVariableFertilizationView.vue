@@ -166,19 +166,25 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
 </script>
 
 <template>
-  <main class="md:flex h-[calc(100vh-4rem)] w-screen">
+  <main class="h-[calc(100vh-4rem)] w-screen md:flex">
     <!-- sidebar -->
-    <!-- <div class="block min-w-84 max-w-96 bg-slate-100 h-full p-8"> -->
     <div
       :class="[
         isDesktop
           ? 'p-8 h-full bg-slate-100 min-w-84'
           : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
-        'block z-10',
+        'block z-20',
       ]"
     >
-      <div class="mt-2 mb-6 font-semibold text-center">可変施肥マップの作成</div>
-      <ol role="list" class="divide-y divide-gray-300 rounded-md border border-gray-300">
+      <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'font-semibold']">
+        可変施肥マップの作成
+      </div>
+      <ol
+        role="list"
+        :class="[
+          isDesktop ? 'divide-y divide-gray-300 rounded-md border border-gray-300' : 'text-sm',
+        ]"
+      >
         <li>
           <selectField v-model:step1-status="step1Status" />
         </li>
@@ -204,7 +210,8 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
       </ol>
     </div>
 
-    <div class="h-full w-full">
+    <!-- main map -->
+    <div class="h-full w-full z-0">
       <MapBase />
     </div>
   </main>

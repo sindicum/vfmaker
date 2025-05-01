@@ -143,7 +143,6 @@ const onClickDeletePolygonBtn = () => {
 </script>
 
 <template>
-  <!-- ポリゴンの新規作成 -->
   <main class="md:flex h-[calc(100vh-4rem)] w-screen">
     <!-- sidebar -->
     <div
@@ -151,10 +150,10 @@ const onClickDeletePolygonBtn = () => {
         isDesktop
           ? 'p-8 h-full bg-slate-100 min-w-84'
           : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
-        'block z-10',
+        'block z-20',
       ]"
     >
-      <div v-if="isDesktop" class="">
+      <div v-if="isDesktop">
         <div class="mt-2 mb-6 text-center font-semibold">圃場登録管理</div>
         <div v-show="currentActiveName !== ''">
           <div
@@ -252,7 +251,7 @@ const onClickDeletePolygonBtn = () => {
     </div>
 
     <!-- main map -->
-    <div class="z-0 h-full w-full">
+    <div class="h-full w-full z-0">
       <MapBase />
     </div>
   </main>
