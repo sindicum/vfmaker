@@ -18,7 +18,7 @@ const store = useStore()
 
 <template>
   <Header />
-  <Alert />
   <RouterView />
+  <Alert />
   <LoadingComp v-if="store.isLoading" />
 </template>

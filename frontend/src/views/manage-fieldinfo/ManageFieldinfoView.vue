@@ -143,12 +143,12 @@ const onClickDeletePolygonBtn = () => {
 </script>
 
 <template>
-  <main class="md:flex h-[calc(100dvh-4rem)] w-screen">
+  <main class="md:flex h-[calc(100vh-4rem)] w-screen">
     <!-- sidebar -->
     <div
       :class="[
         isDesktop
-          ? 'p-8 h-full bg-slate-100 min-w-84'
+          ? 'relative p-8 h-full bg-slate-100 min-w-84'
           : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
         'block z-20',
       ]"
@@ -251,7 +251,7 @@ const onClickDeletePolygonBtn = () => {
     </div>
 
     <!-- main map -->
-    <div class="h-full w-full z-0">
+    <div class="h-full w-full">
       <MapBase />
     </div>
   </main>

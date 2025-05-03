@@ -170,7 +170,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     <div
       :class="[
         isDesktop
-          ? 'p-8 h-full bg-slate-100 min-w-84'
+          ? 'relative p-8 h-full bg-slate-100 min-w-84'
           : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
         'block z-20',
       ]"
@@ -210,7 +210,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     </div>
 
     <!-- main map -->
-    <div class="h-full w-full z-0">
+    <div class="h-full w-full">
       <MapBase />
     </div>
   </main>

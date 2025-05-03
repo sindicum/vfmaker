@@ -75,7 +75,7 @@ function setMapPosition() {
 </script>
 
 <template>
-  <div ref="mapContainer" class="relative h-full w-full">
+  <div ref="mapContainer" class="relative h-full w-full z-0">
     <div
       class="absolute bottom-10 right-2 md:top-2 md:left-2 px-3 py-1 md:p-4 h-fit w-fit rounded-3xl md:rounded-md bg-white/90 z-10"
     >
