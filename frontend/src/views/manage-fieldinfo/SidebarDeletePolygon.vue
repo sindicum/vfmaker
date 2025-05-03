@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'
-import { useStore, usePersistStore } from '@/stores/store'
 import Dialog from '@/components/DialogComp.vue'
-
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
-const persistStore = usePersistStore()
+import { useStore, usePersistStore } from '@/stores/store'
+
+import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'
+
 const store = useStore()
+const persistStore = usePersistStore()
 
 const map = defineModel<MaplibreMap>('map')
 const deletePolygonId = defineModel<string>('deletePolygonId')
@@ -30,13 +31,11 @@ function deleteRegisteredPolygon() {
     if (source) {
       source.setData(persistStore.featurecollection)
     } else {
-      console.error('ソースが見つかりません')
+      store.setMessage('Error', 'ソースが見つかりません')
     }
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = `ポリゴンを削除しました`
+    store.setMessage('Info', 'ポリゴンを削除しました')
   } else {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = `ポリゴンを選択してください`
+    store.setMessage('Error', 'ポリゴンを選択してください')
   }
   deletePolygonId.value = ''
 }
@@ -49,8 +48,7 @@ function deleteAllPolygon() {
   const featuresLength = persistStore.featurecollection.features.length
 
   if (featuresLength === 0) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = `ポリゴンがありません`
+    store.setMessage('Error', 'ポリゴンがありません')
     return
   }
 

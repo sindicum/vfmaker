@@ -45,20 +45,24 @@ const {
 } = useVfmHandler(map)
 
 onMounted(() => {
-  const currentMap = map?.value
-  if (currentMap) {
-    currentMap.on('style.load', () => {
-      addSource(currentMap, persistStore.featurecollection)
-      addLayer(currentMap)
-      currentMap.on('click', 'registeredFillLayer', mapClickHandler)
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (mapInstance) {
+    mapInstance.on('style.load', () => {
+      addSource(mapInstance, persistStore.featurecollection)
+      addLayer(mapInstance)
+      mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
     })
   }
 })
 
 onUnmounted(() => {
-  const currentMap = map?.value
-  if (currentMap) {
-    currentMap.off('click', 'registeredFillLayer', mapClickHandler)
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (mapInstance) {
+    mapInstance.off('click', 'registeredFillLayer', mapClickHandler)
   }
 })
 
@@ -73,7 +77,8 @@ watch(step1Status, (currentStatus, previousStatus) => {
 })
 
 watch(step2Status, (currentStatus, previousStatus) => {
-  const currentMap = map?.value
+  const mapInstance = map?.value
+  if (!mapInstance) return
 
   // Step2 -> Step3
   if (previousStatus === 'current' && currentStatus == 'complete') {
@@ -86,15 +91,16 @@ watch(step2Status, (currentStatus, previousStatus) => {
   if (previousStatus === 'current' && currentStatus === 'upcoming') {
     delayedUpdateSidebar(step1Status, 'current')
 
-    if (currentMap) {
-      removeHumusGrig(currentMap)
-      removeBaseMesh(currentMap)
+    if (mapInstance) {
+      removeHumusGrig(mapInstance)
+      removeBaseMesh(mapInstance)
     }
   }
 })
 
 watch(step3Status, (currentStatus, previousStatus) => {
-  const currentMap = map?.value
+  const mapInstance = map?.value
+  if (!mapInstance) return
 
   // Step3 -> Step1
   if (previousStatus === 'current' && currentStatus == 'complete') {
@@ -102,22 +108,27 @@ watch(step3Status, (currentStatus, previousStatus) => {
     delayedUpdateSidebar(step2Status, 'upcoming')
     delayedUpdateSidebar(step3Status, 'upcoming')
 
-    if (currentMap) {
-      removeHumusGrig(currentMap)
-      removeBaseMesh(currentMap)
-      removeVraMap(currentMap)
+    if (mapInstance) {
+      removeHumusGrig(mapInstance)
+      removeBaseMesh(mapInstance)
+      removeVraMap(mapInstance)
     }
   }
 
-  // Step3 -> Step2
-  if (previousStatus === 'current' && currentStatus === 'upcoming') {
-    if (currentMap) {
-      removeVraMap(currentMap)
+  // Step3 -> Step2（Step3でのマップ切り替え時を除く）
+  if (
+    previousStatus === 'current' &&
+    currentStatus === 'upcoming' &&
+    step1Status.value !== 'current'
+  ) {
+    if (mapInstance) {
+      removeVraMap(mapInstance)
     }
     delayedUpdateSidebar(step2Status, 'current')
   }
 })
 
+// 背景地図切り替え時の処理
 watch(
   () => store.mapStyleIndex,
   () => {
@@ -127,10 +138,11 @@ watch(
       currentMap.once('idle', () => {
         addSource(currentMap, persistStore.featurecollection)
         addLayer(currentMap)
+
         // サイドバーの設定を初期化
-        step1Status.value = 'current'
-        step2Status.value = 'upcoming'
         step3Status.value = 'upcoming'
+        step2Status.value = 'upcoming'
+        step1Status.value = 'current'
       })
     }
   },

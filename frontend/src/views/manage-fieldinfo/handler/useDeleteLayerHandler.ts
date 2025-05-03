@@ -1,33 +1,28 @@
 import { ref } from 'vue'
-import { addLayer, removeEditLayer } from './LayerHandler'
-
 import type { MaplibreRef, MapMouseEvent } from '@/types/maplibre'
+
+import { SOURCE_NAME, FILL_LAYER_NAME } from './LayerHandler'
 
 export function useDeleteLayerHandler(map: MaplibreRef) {
   const deletePolygonId = ref('')
 
-  const SOURCE_NAME = 'registeredFields'
-  const LAYER_NAME = 'editFillLayer'
-
+  // クリックハンドラーを追加
   function onClickDeleteLayer() {
     const mapInstance = map?.value
     if (!mapInstance) return
 
-    mapInstance.on('click', LAYER_NAME, clickDeleteFillLayer)
+    mapInstance.on('click', FILL_LAYER_NAME, clickDeleteFillLayer)
   }
 
   function offClickDeleteLayer() {
     const mapInstance = map?.value
     if (!mapInstance) return
 
-    // TODO以下コードが必要なのか否か不明
-    removeEditLayer(mapInstance)
-    addLayer(mapInstance)
+    mapInstance.off('click', FILL_LAYER_NAME, clickDeleteFillLayer)
     mapInstance.setFeatureState(
-      { source: 'registeredFields', id: deletePolygonId.value },
+      { source: SOURCE_NAME, id: deletePolygonId.value },
       { selected: false },
     )
-    mapInstance.off('click', LAYER_NAME, clickDeleteFillLayer)
     deletePolygonId.value = ''
   }
 
@@ -35,13 +30,14 @@ export function useDeleteLayerHandler(map: MaplibreRef) {
   function clickDeleteFillLayer(e: MapMouseEvent) {
     const mapInstance = map?.value
     if (!mapInstance) return
+
     const feature = e.features?.[0]
     if (!feature || !feature.properties?.id) return
 
     const id = feature.properties.id
     deletePolygonId.value = id
 
-    const features = mapInstance.queryRenderedFeatures({ layers: [LAYER_NAME] })
+    const features = mapInstance.queryRenderedFeatures({ layers: [FILL_LAYER_NAME] })
     features.forEach((f) => {
       if (f.id != null) {
         mapInstance.setFeatureState({ source: SOURCE_NAME, id: f.id }, { selected: false })

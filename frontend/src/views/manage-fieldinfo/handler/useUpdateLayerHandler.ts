@@ -1,11 +1,10 @@
 import { ref } from 'vue'
-import { addLayer, removeEditLayer } from './LayerHandler'
+import { removeEditLayer, COORDINATE_PRECISION } from './LayerHandler'
+
 import type { DrawRef, MaplibreRef, MapMouseEvent } from '@/types/maplibre'
 
 export function useUpdateLayerHandler(map: MaplibreRef, draw: DrawRef) {
   const updatePolygonId = ref('')
-
-  const COORDINATE_PRECISION = 9
 
   function onClickUpdateLayer() {
     const mapInstance = map?.value
@@ -21,8 +20,7 @@ export function useUpdateLayerHandler(map: MaplibreRef, draw: DrawRef) {
     if (!drawInstance) return
 
     drawInstance.clear()
-    removeEditLayer(mapInstance)
-    addLayer(mapInstance)
+
     mapInstance.off('click', 'editFillLayer', clickUpdateFillLayer)
     updatePolygonId.value = ''
   }

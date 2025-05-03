@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import Dialog from '@/components/DialogComp.vue'
-import { usePersistStore } from '@/stores/store'
+import { useStore, usePersistStore } from '@/stores/store'
 
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'
 
+const store = useStore()
 const persistStore = usePersistStore()
 
 const createPolygonActive = defineModel<boolean>('createPolygonActive')
@@ -12,37 +13,37 @@ const map = defineModel<MaplibreMap>('map')
 const draw = defineModel<Draw>('draw')
 const isOpenDialog = defineModel<boolean>('isOpenDialog')
 
-function exitCreatePolygon() {
+const exitCreatePolygon = () => {
   createPolygonActive.value = false
-  if (!draw.value) return
-  draw.value.setMode('static')
 }
 
 // 「ポリゴンの新規作成」ダイアログのYes/No処理
 const selectedDialog = (selected: boolean) => {
-  if (selected) {
-    const mapInstance = map?.value
-    if (!mapInstance) return
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  const drawInstance = draw?.value
+  if (!drawInstance) return
 
+  if (selected) {
     const snapshot = draw.value?.getSnapshot()
     if (!snapshot || snapshot.length === 0) return
     const feature = snapshot[0] as Feature<Polygon>
 
     isOpenDialog.value = false
     persistStore.addFeature(feature)
-    draw.value?.clear()
+    drawInstance.clear()
 
     const source = mapInstance.getSource('registeredFields') as GeoJSONSource
     if (source) {
       source.setData(persistStore.featurecollection)
     } else {
-      console.error('ソースが見つかりません')
+      store.setMessage('Error', 'ソースが見つかりません')
     }
   }
 
   if (!selected) {
-    draw.value?.clear()
-    draw.value?.setMode('polygon')
+    drawInstance.clear()
+    drawInstance.setMode('polygon')
     isOpenDialog.value = false
   }
 }

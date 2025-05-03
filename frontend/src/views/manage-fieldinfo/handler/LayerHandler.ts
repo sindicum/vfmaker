@@ -6,25 +6,27 @@ import {
   ValidateNotSelfIntersecting,
 } from 'terra-draw'
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
-import { union as turfUnion, featureCollection as turfFeatureCollection } from '@turf/turf'
 import { Protocol as PMTilesProtocol } from 'pmtiles'
 
-import type { FeatureCollection, Feature, Polygon } from 'geojson'
-import type { MaplibreMap, Draw } from '@/types/maplibre'
+import type { FeatureCollection } from 'geojson'
+import type { MaplibreMap } from '@/types/maplibre'
 import type { ShallowRef } from 'vue'
 
-const PMTILES = {
+export const SOURCE_NAME = 'registeredFields'
+export const REGISTERED_LAYER_NAME = 'registeredLayer'
+export const LINE_LAYER_NAME = 'editLineLayer'
+export const FILL_LAYER_NAME = 'editFillLayer'
+export const PMTILES = {
   url: import.meta.env.VITE_PMTILES_URL,
   source: '2024hokkaido_fudepolygon',
   sourceId: 'fude-polygon-pmtiles',
   lineLayerId: 'pmTileLineLayerId',
   fillLayerId: 'pmTileFillLayerId',
 }
-
-const COORDINATE_PRECISION = 9
+export const COORDINATE_PRECISION = 9
 
 export function addSource(map: MaplibreMap, featureCollection: FeatureCollection) {
-  map?.addSource('registeredFields', {
+  map?.addSource(SOURCE_NAME, {
     type: 'geojson',
     data: featureCollection,
     promoteId: 'id',
@@ -33,9 +35,9 @@ export function addSource(map: MaplibreMap, featureCollection: FeatureCollection
 
 export function addLayer(map: MaplibreMap) {
   map?.addLayer({
-    id: 'registeredLayer',
+    id: REGISTERED_LAYER_NAME,
     type: 'fill',
-    source: 'registeredFields',
+    source: SOURCE_NAME,
     paint: {
       'fill-color': 'blue',
       'fill-opacity': 0.6,
@@ -44,25 +46,32 @@ export function addLayer(map: MaplibreMap) {
 }
 
 export function removeLayer(map: MaplibreMap) {
-  if (map?.getLayer('registeredLayer')) {
-    map.removeLayer('registeredLayer')
+  if (map?.getLayer(REGISTERED_LAYER_NAME)) {
+    map.removeLayer(REGISTERED_LAYER_NAME)
+  }
+}
+
+// 未使用
+export function removeSource(map: MaplibreMap) {
+  if (map?.getSource(SOURCE_NAME)) {
+    map.removeSource(SOURCE_NAME)
   }
 }
 
 export function addEditLayer(map: MaplibreMap) {
   map?.addLayer({
-    id: 'editLineLayer',
+    id: LINE_LAYER_NAME,
     type: 'line',
-    source: 'registeredFields',
+    source: SOURCE_NAME,
     paint: {
       'line-color': 'gray',
       'line-width': 1,
     },
   })
   map?.addLayer({
-    id: 'editFillLayer',
+    id: FILL_LAYER_NAME,
     type: 'fill',
-    source: 'registeredFields',
+    source: SOURCE_NAME,
     paint: {
       'fill-color': ['case', ['boolean', ['feature-state', 'selected'], false], 'red', 'yellow'],
       'fill-opacity': 0.3,
@@ -71,87 +80,19 @@ export function addEditLayer(map: MaplibreMap) {
 }
 
 export function removeEditLayer(map: MaplibreMap) {
-  if (map?.getLayer('editFillLayer')) {
-    map.removeLayer('editFillLayer')
+  if (map?.getLayer(FILL_LAYER_NAME)) {
+    map.removeLayer(FILL_LAYER_NAME)
   }
-  if (map?.getLayer('editLineLayer')) {
-    map.removeLayer('editLineLayer')
+  if (map?.getLayer(LINE_LAYER_NAME)) {
+    map.removeLayer(LINE_LAYER_NAME)
   }
 }
 
-export function addPMtiles(map: MaplibreMap, draw: Draw) {
+export function addPMTilesSource(map: MaplibreMap) {
+  removePMTitlesSource(map)
+
   const protocol = new PMTilesProtocol()
   addProtocol('pmtiles', protocol.tile)
-  addPMTilesSourceLayer(map)
-
-  map?.on('click', PMTILES.fillLayerId, (e) => {
-    if (!e.features) return
-
-    const clickedPolygonUuid = e.features[0].properties.polygon_uuid
-
-    const features = map.querySourceFeatures(PMTILES.sourceId, {
-      sourceLayer: PMTILES.source,
-    })
-    const filteredFeatures = features.filter((f) => f.properties.polygon_uuid == clickedPolygonUuid)
-
-    let feature: Feature<Polygon> | null = null
-
-    if (filteredFeatures.length === 1) {
-      const f = turfFeatureCollection(filteredFeatures).features[0]
-
-      if (f.geometry.type === 'Polygon') {
-        feature = f as Feature<Polygon>
-      }
-    } else {
-      const polygonFeatures = filteredFeatures.filter(
-        (feature) => feature.geometry.type === 'Polygon',
-      ) as Feature<Polygon>[]
-      const unionResult = turfUnion(turfFeatureCollection(polygonFeatures))
-
-      if (unionResult && unionResult.geometry.type === 'Polygon') {
-        feature = unionResult as Feature<Polygon>
-      } else {
-        feature = null
-      }
-    }
-
-    if (feature == null) return
-
-    const coordinates = feature.geometry.coordinates[0].map((f: number[]) => {
-      const lng = f[0]
-      const lat = f[1]
-      return [
-        parseFloat(lng.toFixed(COORDINATE_PRECISION)),
-        parseFloat(lat.toFixed(COORDINATE_PRECISION)),
-      ]
-    })
-
-    //   clickedPolygonUuidは消失。idはdrawのidが付番される。
-    const newGeom = [
-      {
-        type: 'Feature' as const,
-        geometry: {
-          type: 'Polygon' as const,
-          coordinates: [coordinates],
-        },
-        properties: {
-          mode: 'polygon',
-        },
-      },
-    ]
-    const ids = draw?.addFeatures(newGeom)
-    if (ids == undefined) return
-
-    removePMTitlesSourceLayer(map)
-    draw?.setMode('select')
-    const featureId = ids[0].id
-    if (featureId == null) return
-    draw?.selectFeature(featureId)
-  })
-}
-
-export function addPMTilesSourceLayer(map: MaplibreMap) {
-  removePMTitlesSourceLayer(map)
 
   map?.addSource(PMTILES.sourceId, {
     type: 'vector',
@@ -159,6 +100,10 @@ export function addPMTilesSourceLayer(map: MaplibreMap) {
     minzoom: 8,
     maxzoom: 17,
   })
+}
+
+export function addPMTilesLayer(map: MaplibreMap) {
+  removePMTitlesLayer(map)
 
   map?.addLayer(
     {
@@ -189,17 +134,19 @@ export function addPMTilesSourceLayer(map: MaplibreMap) {
   )
 }
 
-export function removePMTitlesSourceLayer(map: MaplibreMap) {
+export function removePMTitlesSource(map: MaplibreMap) {
+  if (map?.getSource(PMTILES.sourceId)) {
+    map?.removeSource(PMTILES.sourceId)
+  }
+}
+
+export function removePMTitlesLayer(map: MaplibreMap) {
   if (map?.getLayer(PMTILES.lineLayerId)) {
-    map.removeLayer(PMTILES.lineLayerId)
+    map?.removeLayer(PMTILES.lineLayerId)
   }
 
   if (map?.getLayer(PMTILES.fillLayerId)) {
-    map.removeLayer(PMTILES.fillLayerId)
-  }
-
-  if (map?.getSource(PMTILES.sourceId)) {
-    map.removeSource(PMTILES.sourceId)
+    map?.removeLayer(PMTILES.fillLayerId)
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, watch, ref, shallowRef, computed } from 'vue'
+import { inject, onMounted, watch, ref, shallowRef, computed, onUnmounted } from 'vue'
 import { usePersistStore, useStore } from '@/stores/store'
 
 import MapBase from '@/components/map/MapBase.vue'
@@ -8,15 +8,25 @@ import SidebarRegisterFudepoly from './SidebarRegisterFudepoly.vue'
 import SidebarUpdatePolygon from './SidebarUpdatePolygon.vue'
 import SidebarDeletePolygon from './SidebarDeletePolygon.vue'
 
-import { addSource, addLayer, setupTerraDraw } from './handler/LayerHandler'
-import { useDrawHandler } from './handler/useDrawHandler'
-import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
+import {
+  addSource,
+  addLayer,
+  removeLayer,
+  setupTerraDraw,
+  addEditLayer,
+  addPMTilesSource,
+  addPMTilesLayer,
+  removePMTitlesSource,
+  removePMTitlesLayer,
+  removeEditLayer,
+} from './handler/LayerHandler'
+import { useCreateLayerHandler } from './handler/useCreateLayerHandler'
+import { useRegisterFudepolyHandler } from './handler/useRegisterFudepolyHandler'
 import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
+import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
 import type { Draw, MaplibreRef } from '@/types/maplibre'
-import { addPMtiles, addEditLayer, removeLayer } from './handler/LayerHandler'
-
 const store = useStore()
 const persistStore = usePersistStore()
 const { isDesktop } = useControlScreenWidth()
@@ -40,110 +50,168 @@ const currentActiveName = computed(() => {
   return ''
 })
 
-const MESSAGE = {
-  NOT_SELECTED: '筆ポリゴンを選択して下さい',
-  SOURCE_NOT_FOUND: 'ソースが見つかりません',
-  MAP_NOT_READY: '地図インスタンスが初期化されていません',
-  DRAW_NOT_READY: 'Drawインスタンスが初期化されていません',
-}
+const { isOpenDialog, drawOnFinish, drawOffFinish } = useCreateLayerHandler(draw)
 
-const { isOpenDialog, drawOnFinish, drawOffFinish } = useDrawHandler(draw)
-const { deletePolygonId, onClickDeleteLayer, offClickDeleteLayer } = useDeleteLayerHandler(map)
+const { onClickRegisterFudepolyLayer, offClickRegisterFudepolyLayer } = useRegisterFudepolyHandler(
+  map,
+  draw,
+)
+
 const { updatePolygonId, onClickUpdateLayer, offClickUpdateLayer } = useUpdateLayerHandler(
   map,
   draw,
 )
+const { deletePolygonId, onClickDeleteLayer, offClickDeleteLayer } = useDeleteLayerHandler(map)
 
 onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  mapInstance.on('load', () => {
-    addSource(mapInstance, persistStore.featurecollection)
-    addLayer(mapInstance)
-    draw.value = setupTerraDraw(map)
-    draw.value.start()
-    mapLoaded.value = true
-  })
+  mapInstance.on('load', mapOnLoad)
 })
 
+onUnmounted(() => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  mapInstance.off('load', mapOnLoad)
+})
+
+function mapOnLoad() {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  addSource(mapInstance, persistStore.featurecollection)
+  addLayer(mapInstance)
+  draw.value = setupTerraDraw(map)
+  draw.value.start()
+  mapLoaded.value = true
+}
+
+// 背景地図切り替え時の処理
 watch(
   () => store.mapStyleIndex,
   () => {
     const mapInstance = map?.value
     if (!mapInstance) return
+    const drawInstance = draw?.value
+    if (!drawInstance) return
+
+    drawInstance.clear()
 
     mapInstance.once('idle', () => {
       addSource(mapInstance, persistStore.featurecollection)
-      addLayer(mapInstance)
+
+      const topMenu =
+        !createPolygonActive.value &&
+        !registerFudepolyActive.value &&
+        !updatePolygonActive.value &&
+        !deletePolygonActive.value
+
+      if (topMenu) {
+        addLayer(mapInstance)
+      }
+
+      if (createPolygonActive.value) {
+        addLayer(mapInstance)
+      }
+
+      if (registerFudepolyActive.value) {
+        addLayer(mapInstance)
+        addPMTilesSource(mapInstance)
+        addPMTilesLayer(mapInstance)
+      }
+
+      if (updatePolygonActive.value) {
+        addEditLayer(mapInstance)
+      }
+
+      if (deletePolygonActive.value) {
+        addEditLayer(mapInstance)
+      }
     })
   },
 )
 
 watch(createPolygonActive, (isActive) => {
+  const drawInstance = draw?.value
+  if (!drawInstance) return
+
   if (isActive) {
+    drawInstance.setMode('polygon')
     drawOnFinish()
   } else {
+    drawInstance.setMode('static')
     drawOffFinish()
   }
 })
 
-watch(updatePolygonActive, (isActive) => {
+watch(registerFudepolyActive, (isActive) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  const drawInstance = draw?.value
+  if (!drawInstance) return
+
   if (isActive) {
+    addPMTilesSource(mapInstance)
+    addPMTilesLayer(mapInstance)
+    onClickRegisterFudepolyLayer()
+  } else {
+    removePMTitlesLayer(mapInstance)
+    removePMTitlesSource(mapInstance)
+    offClickRegisterFudepolyLayer()
+  }
+})
+
+watch(updatePolygonActive, (isActive) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (isActive) {
+    removeLayer(mapInstance)
+    addEditLayer(mapInstance)
     onClickUpdateLayer()
   } else {
+    removeEditLayer(mapInstance)
+    addLayer(mapInstance)
     offClickUpdateLayer()
   }
 })
 
 watch(deletePolygonActive, (isActive) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
   if (isActive) {
+    removeLayer(mapInstance)
+    addEditLayer(mapInstance)
     onClickDeleteLayer()
   } else {
+    removeEditLayer(mapInstance)
+    addLayer(mapInstance)
     offClickDeleteLayer()
   }
 })
 
 const onClickCreatePolygonBtn = () => {
   createPolygonActive.value = true
-  draw.value?.setMode('polygon')
 }
 
 const onClickRegisterFudepolyBtn = () => {
-  if (!map.value) {
-    console.error(MESSAGE.MAP_NOT_READY)
-    return
-  }
-  if (!draw.value) {
-    console.error(MESSAGE.DRAW_NOT_READY)
-    return
-  }
-
   registerFudepolyActive.value = true
-  addPMtiles(map.value, draw.value)
 }
 
 const onClickUpdatePolygonBtn = () => {
-  const mapInstance = map?.value
-  if (!mapInstance) return
-
   updatePolygonActive.value = true
-  removeLayer(mapInstance)
-  addEditLayer(mapInstance)
 }
 
 const onClickDeletePolygonBtn = () => {
-  const mapInstance = map?.value
-  if (!mapInstance) return
-
   deletePolygonActive.value = true
-  removeLayer(mapInstance)
-  addEditLayer(mapInstance)
 }
 </script>
 
 <template>
-  <main class="fixed top-16 md:flex h-[calc(100vh-4rem)] w-screen">
+  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen md:flex">
     <!-- sidebar -->
     <div
       :class="[

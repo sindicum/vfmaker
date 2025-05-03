@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { useStore, usePersistStore } from '@/stores/store'
-import { addPMTilesSourceLayer, removePMTitlesSourceLayer } from './handler/LayerHandler'
+import {
+  addPMTilesSource,
+  addPMTilesLayer,
+  removePMTitlesSource,
+  removePMTitlesLayer,
+} from './handler/LayerHandler'
+
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'
 
 const store = useStore()
 const persistStore = usePersistStore()
 
-const draw = defineModel<Draw>('draw')
 const map = defineModel<MaplibreMap>('map')
+const draw = defineModel<Draw>('draw')
 const registerFudepolyActive = defineModel<boolean>('registerFudepolyActive')
 
 const MESSAGE = {
@@ -27,7 +33,8 @@ function registerFudepoly() {
 
   persistStore.addFeature(feature)
   draw.value?.clear()
-  addPMTilesSourceLayer(mapInstance)
+  addPMTilesSource(mapInstance)
+  addPMTilesLayer(mapInstance)
 
   const source = mapInstance.getSource('registeredFields') as GeoJSONSource
   if (source) {
@@ -45,7 +52,8 @@ function clearFudepolyLayer() {
   if (!feature) return
 
   draw.value?.clear()
-  addPMTilesSourceLayer(mapInstance)
+  addPMTilesSource(mapInstance)
+  addPMTilesLayer(mapInstance)
 }
 
 // 編集モード終了
@@ -54,7 +62,8 @@ function exitFudepolyEdit() {
   if (!mapInstance) return
   registerFudepolyActive.value = false
   draw.value?.clear()
-  removePMTitlesSourceLayer(mapInstance)
+  removePMTitlesLayer(mapInstance)
+  removePMTitlesSource(mapInstance)
 }
 
 // Draw描画オブジェクトを取得

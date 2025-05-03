@@ -8,8 +8,8 @@ import type { Feature, Polygon } from 'geojson'
 const persistStore = usePersistStore()
 const store = useStore()
 
-const draw = defineModel<Draw>('draw')
 const map = defineModel<MaplibreMap>('map')
+const draw = defineModel<Draw>('draw')
 const updatePolygonId = defineModel<string>('updatePolygonId')
 const updatePolygonActive = defineModel<boolean>('updatePolygonActive')
 
@@ -37,9 +37,7 @@ function updateRegisteredPolygon() {
     }
 
     addEditLayer(mapInstance)
-
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = `ポリゴンを更新しました`
+    store.setMessage('Info', 'ポリゴンを更新しました')
     updatePolygonId.value = ''
   } else {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
@@ -51,8 +49,10 @@ function updateClearEditLayer() {
   if (updatePolygonId.value !== '') {
     const mapInstance = map?.value
     if (!mapInstance) return
+    const drawInstance = draw?.value
+    if (!drawInstance) return
 
-    draw.value?.clear()
+    drawInstance.clear()
     addEditLayer(mapInstance)
     updatePolygonId.value = ''
   } else {
