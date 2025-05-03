@@ -95,7 +95,7 @@ function setMapPosition() {
                 role="radio"
               />
             </div>
-            <div class="ml-3 text-sm leading-6 text-gray-900">
+            <div class="ml-3 text-xs md:text-sm leading-6 text-gray-900">
               {{ map_style.name }}
             </div>
           </label>

@@ -22,7 +22,7 @@ const navigation: {
 </script>
 
 <template>
-  <header class="fixed top-0 flex items-center justify-between w-screen h-16 bg-slate-800">
+  <header class="fixed top-0 flex items-center justify-between w-screen h-16 bg-slate-800 z-10">
     <div class="ml-4 md:ml-10 text-2xl text-amber-300 tracking-wide">
       VFMaker <span class="text-xl">（β版）</span>
     </div>
@@ -30,8 +30,8 @@ const navigation: {
     <nav
       v-if="isDesktop || isOpenMenu"
       :class="[
-        isDesktop ? 'flex-row' : 'absolute top-16 flex-col  bg-slate-800/60',
-        'flex right-0 z-30',
+        isDesktop ? 'flex-row' : 'absolute top-16 flex-col z-20 bg-slate-800/60',
+        'flex right-0',
       ]"
     >
       <RouterLink

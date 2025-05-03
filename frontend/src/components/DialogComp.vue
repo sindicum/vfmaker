@@ -16,7 +16,7 @@ const onSelected = (selected: boolean) => {
 </script>
 
 <template>
-  <div v-show="props.isOpen" class="fixed top-0 left-0 w-screen h-screen bg-black/30">
+  <div v-show="props.isOpen" class="fixed top-0 left-0 w-screen h-screen bg-black/30 z-40">
     <div class="flex items-center justify-center h-full">
       <div class="bg-slate-100 w-80 h-44 rounded-md">
         <div class="text-center pt-8 pb-4">{{ message }}</div>

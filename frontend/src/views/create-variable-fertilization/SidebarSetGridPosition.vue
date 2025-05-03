@@ -65,6 +65,7 @@ const returnStep1 = () => {
       >
         <label class="">回転角度(°)</label>
         <input
+          v-show="isDesktop"
           :class="[
             currentDialogName === 'rotationAngle' ? ' bg-amber-300' : 'bg-white',
             'w-10 mr-1 rounded-md border',
@@ -74,8 +75,7 @@ const returnStep1 = () => {
           v-model="gridRotationAngle"
         />
         <input
-          v-show="isDesktop"
-          class="w-full"
+          class="w-14 md:w-full"
           type="range"
           :min="gridParams.rotationAngle.min"
           :max="gridParams.rotationAngle.max"

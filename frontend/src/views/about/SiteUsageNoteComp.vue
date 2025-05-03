@@ -46,10 +46,11 @@ const siteUsageNotes = [
 
 <template>
   <div class="w-full lg:w-5xl h-full mx-4 my-8 px-4">
-    <h1 class="text-3xl font-bold text-center text-amber-900 my-10">本サイトについて</h1>
+    <h1 class="text-3xl font-bold text-center text-amber-900 my-10">VFMakerについて</h1>
     <div class="my-18 mx-6 leading-loose">
       本サービスは、オープンデータとサーバーレス技術、オープンソース開発によって構築されています。
       農業DXの発展に寄与することを目指し、どなたでもアクセスし活用できる環境を提供しています。<br />
+      パソコン、タブレット、スマートフォンのいずれでも利用可能なレスポンシブデザインを採用しています。<br />
       なお、本サイトは個人運営であり、開発者の所属組織とは関係を有しておりません。
       以下の注意事項を了承のうえご利用くださいますようお願い申し上げます。
     </div>
