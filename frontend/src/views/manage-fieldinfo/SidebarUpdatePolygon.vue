@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePersistStore, useStore } from '@/stores/store'
-import { addEditLayer } from './handler/LayerHandler'
+import { addEditLayer, FILL_LAYER_NAME } from './handler/LayerHandler'
 
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'
@@ -15,7 +15,12 @@ const updatePolygonActive = defineModel<boolean>('updatePolygonActive')
 
 // 更新実行
 function updateRegisteredPolygon() {
-  if (updatePolygonId.value !== '') {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
+
+  if (updatePolygonId.value !== '' && !hasLayer) {
     const mapInstance = map?.value
     if (!mapInstance) return
 
@@ -39,23 +44,39 @@ function updateRegisteredPolygon() {
     addEditLayer(mapInstance)
     store.setMessage('Info', 'ポリゴンを更新しました')
     updatePolygonId.value = ''
-  } else {
+  }
+
+  if (updatePolygonId.value !== '' && hasLayer) {
+    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    updatePolygonId.value = ''
+  }
+
+  if (updatePolygonId.value === '' && hasLayer) {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
   }
 }
 
 // 選択クリア
 function updateClearEditLayer() {
-  if (updatePolygonId.value !== '') {
-    const mapInstance = map?.value
-    if (!mapInstance) return
-    const drawInstance = draw?.value
-    if (!drawInstance) return
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  const drawInstance = draw?.value
+  if (!drawInstance) return
 
+  const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
+
+  if (updatePolygonId.value !== '' && !hasLayer) {
     drawInstance.clear()
     addEditLayer(mapInstance)
     updatePolygonId.value = ''
-  } else {
+  }
+
+  if (updatePolygonId.value !== '' && hasLayer) {
+    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    updatePolygonId.value = ''
+  }
+
+  if (updatePolygonId.value === '' && hasLayer) {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
   }
 }
