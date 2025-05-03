@@ -143,7 +143,7 @@ const onClickDeletePolygonBtn = () => {
 </script>
 
 <template>
-  <main class="md:flex h-[calc(100vh-4rem)] w-screen">
+  <main class="fixed top-16 md:flex h-[calc(100vh-4rem)] w-screen">
     <!-- sidebar -->
     <div
       :class="[

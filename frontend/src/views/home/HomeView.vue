@@ -34,7 +34,7 @@ watch(
 </script>
 
 <template>
-  <main class="h-[calc(100dvh-4rem)] w-screen">
+  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen">
     <MapBase />
   </main>
 </template>
