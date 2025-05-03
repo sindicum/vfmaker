@@ -1,0 +1,55 @@
+name: Deploy Vue SPA to S3
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  VITE_API_URL: ${{ vars.VITE_API_URL }}
+  VITE_PMTILES_URL: ${{ vars.VITE_PMTILES_URL }}
+  VITE_OM_MAP_URL: ${{ vars.VITE_OM_MAP_URL }}
+  VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+  ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) ソース取得
+      - uses: actions/checkout@v4
+
+      # 2) Node セットアップ
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3) 依存解決 & ビルド
+      - name: Install deps & build
+        run: |
+          npm ci
+          npx vite build
+
+      # 4) AWS 資格情報を OIDC で取得
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/github-actions-s3-deploy
+          aws-region: ${{ env.AWS_REGION }}
+          unset-current-credentials: true # 後続ジョブへの漏洩防止
+          output-credentials: true
+
+      # 5) S3 へ同期
+      - name: Sync to S3
+        run: |
+          aws s3 sync ./dist s3://${{ env.BUCKET_NAME }} \
+            --delete \
+            --exclude '.DS_Store' \
+            --cache-control 'public,max-age=31536000,immutable' \
+            --follow-symlinks
