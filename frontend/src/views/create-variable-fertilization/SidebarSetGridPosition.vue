@@ -38,13 +38,6 @@ const returnStep1 = () => {
 </script>
 
 <template>
-  <InputNumberDialog
-    v-model:dialog-name="currentDialogName"
-    v-model:grid-rotation-angle="gridRotationAngle"
-    v-model:grid-e-w="gridEW"
-    v-model:grid-n-s="gridNS"
-    v-model:buffer="buffer"
-  />
   <div v-if="isDesktop || step2Status === 'current'" class="grid-cols-1 grid items-center">
     <StepStatusHeader id="2" name="グリッドの作成" v-model:current-step-status="step2Status" />
 
@@ -154,5 +147,12 @@ const returnStep1 = () => {
         </button>
       </div>
     </div>
+    <InputNumberDialog
+      v-model:dialog-name="currentDialogName"
+      v-model:grid-rotation-angle="gridRotationAngle"
+      v-model:grid-e-w="gridEW"
+      v-model:grid-n-s="gridNS"
+      v-model:buffer="buffer"
+    />
   </div>
 </template>

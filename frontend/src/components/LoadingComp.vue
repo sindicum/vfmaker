@@ -1,5 +1,5 @@
 <template>
-  <div class="fullOverlay z-50">
+  <div class="fullOverlay">
     <div class="spinner">
       <div class="double-bounce1"></div>
       <div class="double-bounce2"></div>

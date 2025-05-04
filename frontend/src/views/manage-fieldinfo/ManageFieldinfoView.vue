@@ -319,8 +319,8 @@ const onClickDeletePolygonBtn = () => {
     </div>
 
     <!-- main map -->
-    <div class="h-full w-full">
-      <MapBase />
-    </div>
+    <!-- <div class="h-full w-full"> -->
+    <MapBase />
+    <!-- </div> -->
   </main>
 </template>

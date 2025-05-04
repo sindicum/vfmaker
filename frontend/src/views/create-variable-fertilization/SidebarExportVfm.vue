@@ -73,12 +73,6 @@ async function exportVfm() {
 </script>
 
 <template>
-  <InputNumberDialog
-    v-model:dialog-name="currentDialogName"
-    v-model:base-fertilization-amount="baseFertilizationAmount"
-    v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
-  />
-
   <div v-if="isDesktop || step3Status === 'current'" class="grid-cols-1 grid items-center">
     <StepStatusHeader
       id="3"
@@ -148,4 +142,10 @@ async function exportVfm() {
       </div>
     </div>
   </div>
+
+  <InputNumberDialog
+    v-model:dialog-name="currentDialogName"
+    v-model:base-fertilization-amount="baseFertilizationAmount"
+    v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
+  />
 </template>

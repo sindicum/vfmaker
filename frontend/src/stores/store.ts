@@ -19,6 +19,7 @@ export const useStore = defineStore('store', () => {
     alertMessage.value.alertType = alertType
     alertMessage.value.message = message
   }
+
   return {
     mapLoaded,
     alertMessage,

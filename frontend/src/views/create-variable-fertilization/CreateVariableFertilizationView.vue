@@ -222,8 +222,8 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     </div>
 
     <!-- main map -->
-    <div class="h-full w-full">
-      <MapBase />
-    </div>
+    <!-- <div class="h-full w-full"> -->
+    <MapBase />
+    <!-- </div> -->
   </main>
 </template>
