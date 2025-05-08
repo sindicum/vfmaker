@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch, inject, shallowRef } from 'vue'
-import { Map as MaplibreMapObject, NavigationControl, ScaleControl } from 'maplibre-gl'
+import {
+  Map as MaplibreMapObject,
+  NavigationControl,
+  ScaleControl,
+  GeolocateControl,
+} from 'maplibre-gl'
 import { useStore, usePersistStore } from '@/stores/store'
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
@@ -42,6 +47,17 @@ onMounted(() => {
   map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
 
   map.value.addControl(new ScaleControl())
+
+  map.value.addControl(
+    new GeolocateControl({
+      positionOptions: {
+        // より精度の高い位置情報を取得する
+        enableHighAccuracy: true,
+      },
+      // ユーザーが移動するたびに位置を自動的に更新
+      trackUserLocation: true,
+    }),
+  )
   store.mapLoaded = true
   map.value.on('moveend', setMapPosition)
 })
