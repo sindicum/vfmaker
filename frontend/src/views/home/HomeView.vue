@@ -2,6 +2,7 @@
 import { onMounted, watch, inject, ref } from 'vue'
 
 import MapBase from '@/components/map/MapBase.vue'
+import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
 import { useHumusCog } from '@/components/useHumusCog'
 import { useStore } from '@/stores/store'
 
@@ -54,7 +55,7 @@ watch(isCogLayerVisible, async () => {
 <template>
   <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen">
     <MapBase />
-    <!-- INSERT_YOUR_CODE -->
+    <HumusMapLegend />
     <div
       :class="[
         isDesktop

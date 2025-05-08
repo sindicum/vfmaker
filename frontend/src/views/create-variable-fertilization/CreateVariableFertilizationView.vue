@@ -3,6 +3,7 @@ import { inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useStore, usePersistStore } from '@/stores/store'
 
 import MapBase from '@/components/map/MapBase.vue'
+import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
 import selectField from './SidebarSelectField.vue'
 import setGridPosition from './SidebarSetGridPosition.vue'
 import exportVfm from './SidebarExportVfm.vue'
@@ -232,5 +233,6 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     </div>
 
     <MapBase />
+    <HumusMapLegend />
   </main>
 </template>
