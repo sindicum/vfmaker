@@ -85,6 +85,22 @@ export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
       'circle-opacity': 0.8,
     },
   })
+
+  // 腐植値のシンボル表示
+  // map?.addLayer({
+  //   id: 'humusGrid-label',
+  //   type: 'symbol',
+  //   source: 'humusGrid',
+  //   layout: {
+  //     'text-field': ['get', 'humus'],
+  //     'text-size': 12,
+  //   },
+  //   paint: {
+  //     'text-color': '#000000',
+  //     'text-halo-color': '#ffffff',
+  //     'text-halo-width': 1,
+  //   },
+  // })
 }
 
 export function removeHumusGrig(map: MaplibreMap) {
@@ -146,19 +162,19 @@ export function addVraMap(
         -1,
         '#000000',
         // // 赤
-        applicationStep[0],
+        applicationStep[4],
         '#d7191c',
         // 橙
-        applicationStep[1],
+        applicationStep[3],
         '#fdae61',
         // 黄
         applicationStep[2],
         '#ffffbf',
         // 緑
-        applicationStep[3],
+        applicationStep[1],
         '#abdda4',
         // 青
-        applicationStep[4],
+        applicationStep[0],
         '#2b83ba',
       ],
       'fill-opacity': 0.8,
