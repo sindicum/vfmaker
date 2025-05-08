@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch, inject, shallowRef } from 'vue'
-import { Map as MaplibreMapObject, NavigationControl } from 'maplibre-gl'
+import { Map as MaplibreMapObject, NavigationControl, ScaleControl } from 'maplibre-gl'
 import { useStore, usePersistStore } from '@/stores/store'
 import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 
@@ -40,6 +40,8 @@ onMounted(() => {
   })
 
   map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
+
+  map.value.addControl(new ScaleControl())
   store.mapLoaded = true
   map.value.on('moveend', setMapPosition)
 })
@@ -60,6 +62,7 @@ onUnmounted(() => {
   if (!mapInstance) return
   mapInstance.off('moveend', setMapPosition)
   mapInstance.remove()
+  map.value = null
 })
 
 function setMapPosition() {
