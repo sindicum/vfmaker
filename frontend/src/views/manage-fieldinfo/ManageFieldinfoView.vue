@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, watch, ref, shallowRef, computed, onUnmounted } from 'vue'
+import { inject, onMounted, watch, ref, shallowRef, computed, onBeforeUnmount } from 'vue'
 import { usePersistStore, useStore } from '@/stores/store'
 
 import MapBase from '@/components/map/MapBase.vue'
@@ -11,14 +11,15 @@ import SidebarDeletePolygon from './SidebarDeletePolygon.vue'
 import {
   addSource,
   addLayer,
+  removeSource,
   removeLayer,
-  setupTerraDraw,
   addEditLayer,
+  removeEditLayer,
   addPMTilesSource,
   addPMTilesLayer,
   removePMTitlesSource,
   removePMTitlesLayer,
-  removeEditLayer,
+  setupTerraDraw,
 } from './handler/LayerHandler'
 import { useCreateLayerHandler } from './handler/useCreateLayerHandler'
 import { useRegisterFudepolyHandler } from './handler/useRegisterFudepolyHandler'
@@ -33,10 +34,9 @@ const { isDesktop } = useControlScreenWidth()
 
 const map = inject<MaplibreRef>('mapkey')
 if (!map) throw new Error('Map instance not provided')
-
 const draw = shallowRef<Draw>(null)
-const mapLoaded = ref(false)
 
+const mapLoaded = ref(false)
 const createPolygonActive = ref(false)
 const registerFudepolyActive = ref(false)
 const updatePolygonActive = ref(false)
@@ -70,11 +70,27 @@ onMounted(() => {
   mapInstance.on('load', mapOnLoad)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
+  const drawInstance = draw?.value
+  if (!drawInstance) return
+
+  removeLayer(mapInstance)
+  removeEditLayer(mapInstance)
+  removeSource(mapInstance)
+  removePMTitlesLayer(mapInstance)
+  removePMTitlesSource(mapInstance)
 
   mapInstance.off('load', mapOnLoad)
+  drawInstance.clear()
+  drawInstance.stop()
+
+  mapLoaded.value = false
+  createPolygonActive.value = false
+  registerFudepolyActive.value = false
+  updatePolygonActive.value = false
+  deletePolygonActive.value = false
 })
 
 function mapOnLoad() {
@@ -318,9 +334,6 @@ const onClickDeletePolygonBtn = () => {
       </div>
     </div>
 
-    <!-- main map -->
-    <!-- <div class="h-full w-full"> -->
     <MapBase />
-    <!-- </div> -->
   </main>
 </template>

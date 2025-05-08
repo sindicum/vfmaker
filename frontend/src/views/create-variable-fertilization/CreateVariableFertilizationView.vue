@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useStore, usePersistStore } from '@/stores/store'
 
 import MapBase from '@/components/map/MapBase.vue'
@@ -9,6 +9,8 @@ import exportVfm from './SidebarExportVfm.vue'
 import {
   addSource,
   addLayer,
+  removeLayer,
+  removeSource,
   removeHumusGrig,
   removeBaseMesh,
   removeVraMap,
@@ -57,13 +59,21 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  if (mapInstance) {
-    mapInstance.off('click', 'registeredFillLayer', mapClickHandler)
-  }
+  removeLayer(mapInstance)
+  removeSource(mapInstance)
+  removeHumusGrig(mapInstance)
+  removeBaseMesh(mapInstance)
+  removeVraMap(mapInstance)
+
+  mapInstance.off('click', 'registeredFillLayer', mapClickHandler)
+
+  step1Status.value = 'current'
+  step2Status.value = 'upcoming'
+  step3Status.value = 'upcoming'
 })
 
 watch(step1Status, (currentStatus, previousStatus) => {
@@ -221,9 +231,6 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
       </ol>
     </div>
 
-    <!-- main map -->
-    <!-- <div class="h-full w-full"> -->
     <MapBase />
-    <!-- </div> -->
   </main>
 </template>

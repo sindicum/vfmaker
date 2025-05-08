@@ -45,13 +45,12 @@ export function addLayer(map: MaplibreMap) {
   })
 }
 
-export function removeLayer(map: MaplibreMap) {
+export function removeLayer(map: MaplibreMap | null | undefined) {
   if (map?.getLayer(REGISTERED_LAYER_NAME)) {
     map.removeLayer(REGISTERED_LAYER_NAME)
   }
 }
 
-// 未使用
 export function removeSource(map: MaplibreMap) {
   if (map?.getSource(SOURCE_NAME)) {
     map.removeSource(SOURCE_NAME)

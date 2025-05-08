@@ -30,6 +30,21 @@ export function addLayer(map: MaplibreMap) {
   })
 }
 
+export function removeLayer(map: MaplibreMap | null | undefined) {
+  if (map?.getLayer('registeredFillLayer')) {
+    map.removeLayer('registeredFillLayer')
+  }
+  if (map?.getLayer('registeredLineLayer')) {
+    map.removeLayer('registeredLineLayer')
+  }
+}
+
+export function removeSource(map: MaplibreMap) {
+  if (map?.getSource('registeredFields')) {
+    map.removeSource('registeredFields')
+  }
+}
+
 export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
   removeHumusGrig(map)
 
