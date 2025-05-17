@@ -44,9 +44,9 @@ onMounted(() => {
     hash: true,
   })
 
-  map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
-
   map.value.addControl(new ScaleControl())
+
+  map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
 
   map.value.addControl(
     new GeolocateControl({
@@ -57,6 +57,7 @@ onMounted(() => {
       // ユーザーが移動するたびに位置を自動的に更新
       trackUserLocation: true,
     }),
+    isDesktop.value ? 'top-right' : 'bottom-left',
   )
   store.mapLoaded = true
   map.value.on('moveend', setMapPosition)
