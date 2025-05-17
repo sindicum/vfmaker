@@ -50,14 +50,15 @@
       </div>
 
       <div class="my-8">
-        <li class="text-xl font-bold my-2 text-slate-800">AWS S3 & Lambda</li>
+        <li class="text-xl font-bold my-2 text-slate-800">AWS CloudFront + S3 + Lambda</li>
         <div class="leading-loose mx-6">
-          本サイトは、Vue.jsからのビルドファイルをAWS S3でホスティングしています。
-          可変施肥マップの作成はパラメーターをAWS API Gatewayに送信し、 AWS
-          LambdaのPythonランタイムでシェープファイル（Shapefile）に変換され、自動ダウンロードされます。
-          サーバーレスアーキテクチャを採用することで、堅牢かつ低コストな運用に取り組んでます。<br />
-          なお、一般的にS3の前段に配置されるCloudFrontは、現状導入してません。
-          利用者が増えた場合には、パフォーマンス向上および安定稼働のために配置する予定です。
+          本サイトは、Vue.jsで構築されたビルドファイルをAWS CloudFront および
+          S3によってホスティングしています。
+          可変施肥マップの作成においては、ユーザーが指定したパラメーターをAWS API
+          Gateway経由で送信し、 AWS
+          Lambda（Pythonランタイム）によりでShapefile（シェープファイル）へと変換され、
+          クライアントに自動的にダウンロードされます。
+          サーバーレスアーキテクチャを採用することで、堅牢かつ低コストな運用を実現しています。<br />
         </div>
       </div>
 
