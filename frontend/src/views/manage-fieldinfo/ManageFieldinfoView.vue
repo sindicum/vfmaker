@@ -168,6 +168,13 @@ watch(registerFudepolyActive, (isActive) => {
   const drawInstance = draw?.value
   if (!drawInstance) return
 
+  const zoomLevel = mapInstance.getZoom()
+
+  if (zoomLevel <= 8) {
+    store.setMessage('Error', '筆ポリゴンが表示されるズームレベルは8以上です')
+    registerFudepolyActive.value = false
+  }
+
   if (isActive) {
     addPMTilesSource(mapInstance)
     addPMTilesLayer(mapInstance)
