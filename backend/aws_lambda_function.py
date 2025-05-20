@@ -85,8 +85,11 @@ def lambda_handler(event, context):
             'headers': {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'no-store',
                 'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS'
+                'Access-Control-Allow-Methods': 'POST,OPTIONS',
+                'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                'X-Content-Type-Options': 'nosniff'
             }
         }
 
@@ -102,3 +105,5 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Methods': 'POST,OPTIONS'
             }
         }
+
+
