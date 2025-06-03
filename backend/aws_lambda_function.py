@@ -47,13 +47,13 @@ def lambda_handler(event, context):
 
         base_path = "/tmp/output"
         w = shapefile.Writer(base_path, shapeType=shapefile.POLYGON)
-        w.field("TOTAL_AMT", "N")
+        w.field("VF_AMT", "N")
 
         for feature in geojson["features"]:
             coords = feature["geometry"]["coordinates"]
-            total = feature["properties"].get("amount_fertilization_total", 0)
+            applicationAmount = feature["properties"].get("amount_fertilization_unit", 0) * 10
             w.poly(coords)
-            w.record(total)
+            w.record(applicationAmount)
 
         w.close()
 
