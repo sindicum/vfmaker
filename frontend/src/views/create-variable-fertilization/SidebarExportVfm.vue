@@ -138,7 +138,7 @@ async function exportVfm() {
         <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round(totalAmount ?? 0) }} kg</div>
 
         <label>概算面積</label>
-        <div :class="[isDesktop ? '' : 'text-center']">{{ ((area ?? 0) / 100).toFixed(1) }} a</div>
+        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round((area ?? 0) / 100) }} a</div>
       </div>
       <div class="grid grid-cols-2 gap-3 justify-center my-4">
         <button
