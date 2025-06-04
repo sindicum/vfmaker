@@ -87,6 +87,7 @@ export function useVfmHandler(map: MaplibreRef) {
       humusMeanAreaMap,
       applicationStep.value,
     )
+    totalAmount.value = 0
     sortedFeatures.forEach((v) => {
       if (v.properties === null) return
 
@@ -97,7 +98,7 @@ export function useVfmHandler(map: MaplibreRef) {
       const area = v.properties.area
       v.properties.amount_fertilization_factor = amountFertilizationFactor
       v.properties.amount_fertilization_unit = unit
-      v.properties.amount_fertilization_total = Math.round((unit * area) / 100)
+      totalAmount.value += (unit * area) / 1000
     })
     applicationGridFeatures.value = sortedFeatures
     // VraMapを表示
