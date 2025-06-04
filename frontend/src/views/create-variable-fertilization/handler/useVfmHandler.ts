@@ -39,6 +39,8 @@ export function useVfmHandler(map: MaplibreRef) {
 
   let timeoutId: number | null = null
 
+  const totalAmount = ref(0)
+
   // Step3で設定する、基準施肥量、可変施肥増減率を監視
   watch([variableFertilizationRangeRate, baseFertilizationAmount], () => {
     if (timeoutId) {
@@ -128,6 +130,7 @@ export function useVfmHandler(map: MaplibreRef) {
 
     const humusMeanFertilizerRateMap = distributeFertilizerRate(humusMeanAreaMap, applicationStep)
 
+    totalAmount.value = 0
     applicationGrid.map((v) => {
       if (v.properties === null) return
 
@@ -138,7 +141,8 @@ export function useVfmHandler(map: MaplibreRef) {
       const unit = Math.round(fertilizationAmount * (1 + amountFertilizationFactor))
       const area = v.properties.area
       v.properties.amount_fertilization_unit = unit
-      v.properties.amount_fertilization_total = Math.round((unit * area) / 100)
+      // v.properties.amount_fertilization_total = Math.round((unit * area) / 100)
+      totalAmount.value += (unit * area) / 1000
     })
 
     return applicationGrid
@@ -266,6 +270,7 @@ export function useVfmHandler(map: MaplibreRef) {
     baseFertilizationAmount,
     variableFertilizationRangeRate,
     applicationGridFeatures,
+    totalAmount,
     createVfm,
   }
 }

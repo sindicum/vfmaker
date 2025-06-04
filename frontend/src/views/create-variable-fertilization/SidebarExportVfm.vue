@@ -9,10 +9,12 @@ import { useControlScreenWidth } from '@/components/useControlScreenWidth'
 const currentDialogName = ref<dialogType>('')
 const store = useStore()
 
+const area = defineModel<number>('area')
 const step3Status = defineModel('step3Status')
 const baseFertilizationAmount = defineModel('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
 const applicationGridFeatures = defineModel('applicationGridFeatures')
+const totalAmount = defineModel<number>('totalAmount')
 
 const { isDesktop } = useControlScreenWidth()
 
@@ -92,7 +94,7 @@ async function exportVfm() {
         :class="[
           isDesktop
             ? 'grid-cols-[7fr_2fr_4fr] col-span-1 gap-y-3'
-            : 'grid-cols-[7fr_3fr_7fr_3fr] col-span-2 gap-y-1',
+            : 'grid-cols-[7fr_3fr_7fr_3fr] col-span-2 gap-y-2',
           'grid  items-center',
         ]"
       >
@@ -125,6 +127,18 @@ async function exportVfm() {
           :max="gridParams.variableFertilizationRangeRate.max"
           v-model="variableFertilizationRangeRate"
         />
+      </div>
+      <div
+        :class="[
+          isDesktop ? 'grid-cols-2 gap-3 ' : 'grid-cols-4',
+          'grid my-3 items-center font-bold text-sky-600',
+        ]"
+      >
+        <label>合計施肥量</label>
+        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round(totalAmount ?? 0) }} kg</div>
+
+        <label>概算面積</label>
+        <div :class="[isDesktop ? '' : 'text-center']">{{ ((area ?? 0) / 100).toFixed(1) }} a</div>
       </div>
       <div class="grid grid-cols-2 gap-3 justify-center my-4">
         <button

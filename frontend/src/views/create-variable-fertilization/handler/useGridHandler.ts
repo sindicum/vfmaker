@@ -49,6 +49,7 @@ export function useGridHandler(map: MaplibreRef) {
     features: [],
   })
 
+  const area = ref<number>(0)
   const activeFeature = ref<Feature<Polygon, { id: string }>>()
 
   const activeFeatureBufferComputed = computed<Feature<Polygon> | undefined>(() => {
@@ -58,7 +59,10 @@ export function useGridHandler(map: MaplibreRef) {
     const result = turfBuffer(activeFeature.value, bufferMeter, {
       units: 'kilometers',
     })
-    return result as Feature<Polygon> // TurfはPolygonを返すはず
+
+    if (!result) return undefined
+    area.value = turfArea(result)
+    return result as Feature<Polygon> // TurfはPolygonを返す
   })
 
   // Step2で設定する、回転角度、グリッド幅EW、グリッド幅NS、バッファーを監視
@@ -296,8 +300,7 @@ export function useGridHandler(map: MaplibreRef) {
         }
 
         // areaプロパティを付与
-        const area = turfArea(mesh_feature)
-        mesh_feature.properties.area = Math.round(area)
+        mesh_feature.properties.area = turfArea(mesh_feature)
 
         grid_feature_collection.push(mesh_feature)
 
@@ -368,6 +371,7 @@ export function useGridHandler(map: MaplibreRef) {
   }
 
   return {
+    area,
     gridRotationAngle,
     gridEW,
     gridNS,

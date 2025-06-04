@@ -37,7 +37,7 @@ const step3Status = ref<StepStatus>('upcoming')
 // グリッド編集状態
 const isInEdit = ref(false)
 
-const { gridRotationAngle, gridEW, gridNS, buffer, humusPoint, baseMesh, onClickField } =
+const { area, gridRotationAngle, gridEW, gridNS, buffer, humusPoint, baseMesh, onClickField } =
   useGridHandler(map)
 
 const {
@@ -45,6 +45,7 @@ const {
   baseFertilizationAmount,
   variableFertilizationRangeRate,
   applicationGridFeatures,
+  totalAmount,
 } = useVfmHandler(map)
 
 onMounted(() => {
@@ -227,12 +228,14 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:base-fertilization-amount="baseFertilizationAmount"
             v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
             v-model:application-grid-features="applicationGridFeatures"
+            v-model:total-amount="totalAmount"
+            v-model:area="area"
           />
         </li>
       </ol>
     </div>
 
     <MapBase />
-    <HumusMapLegend />
+    <HumusMapLegend v-show="step3Status !== 'current'" />
   </main>
 </template>
