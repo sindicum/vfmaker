@@ -23,7 +23,7 @@ const navigation: {
 
 <template>
   <header class="fixed top-0 flex items-center justify-between w-screen h-16 bg-slate-800 z-10">
-    <div class="ml-4 md:ml-10 text-2xl text-amber-300 tracking-wide">
+    <div class="ml-4 lg:ml-10 text-2xl text-amber-300 tracking-wide">
       VFMaker <span class="text-xl">（β版）</span>
     </div>
     <HamburgerButton v-model:is-open-menu="isOpenMenu" />
@@ -39,8 +39,8 @@ const navigation: {
         :to="item.href"
         :key="item.href"
         :class="[
-          route.path === item.href ? 'md:bg-slate-950 rounded-md text-amber-300' : 'text-white',
-          'hover:text-amber-400 px-4 py-4 md:py-2',
+          route.path === item.href ? 'lg:bg-slate-950 rounded-md text-amber-300' : 'text-white',
+          'hover:text-amber-400 px-4 py-4 lg:py-2',
         ]"
         @click="isOpenMenu = false"
       >

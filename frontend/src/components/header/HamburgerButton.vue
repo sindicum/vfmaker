@@ -8,7 +8,7 @@ const toggleMenu = () => {
 
 <template>
   <button
-    class="relative md:invisible h-4 mt-2.5 mb-2 mx-2 w-5"
+    class="relative lg:invisible h-4 mt-2.5 mb-2 mx-2 w-5"
     type="button"
     @click="toggleMenu"
     :aria-expanded="isOpenMenu"

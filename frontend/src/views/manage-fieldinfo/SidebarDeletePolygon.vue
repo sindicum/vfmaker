@@ -80,11 +80,11 @@ const selectedDialog = (selected: boolean) => {
 </script>
 
 <template>
-  <div class="flex flex-row md:flex-col gap-4 text-sm sm:text-base">
+  <div class="flex flex-row lg:flex-col gap-4 text-sm sm:text-base">
     <button
       type="button"
       @click="deleteRegisteredPolygon"
-      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!deletePolygonActive"
     >
       選択した<br v-if="!isDesktop" />ポリゴンの削除
@@ -92,7 +92,7 @@ const selectedDialog = (selected: boolean) => {
     <button
       type="button"
       @click="deleteAllPolygon"
-      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!deletePolygonActive"
     >
       ポリゴンの<br v-if="!isDesktop" />全削除
@@ -100,7 +100,7 @@ const selectedDialog = (selected: boolean) => {
     <button
       type="button"
       @click="deleteExitEdit"
-      class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+      class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!deletePolygonActive"
     >
       編集モード終了

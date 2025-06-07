@@ -34,7 +34,7 @@ watch(
         store.alertMessage.alertType === 'Error'
           ? 'bg-red-100/80 border-red-600'
           : 'bg-green-100/80 border-green-600',
-        'fixed top-2 md:top-20 w-11/12 h-16 md:w-1/2 rounded-md border',
+        'fixed top-2 lg:top-20 w-11/12 h-16 lg:w-1/2 rounded-md border',
       ]"
     >
       <button type="button" class="absolute right-0 w-6 h-6" @click="closeAlert()">×</button>

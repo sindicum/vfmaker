@@ -271,7 +271,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
 </script>
 
 <template>
-  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen md:flex">
+  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen lg:flex">
     <!-- sidebar -->
     <div
       :class="[

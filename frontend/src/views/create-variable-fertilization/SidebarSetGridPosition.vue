@@ -70,7 +70,7 @@ const returnStep1 = () => {
           v-model="gridRotationAngle"
         />
         <input
-          class="w-14 md:w-full"
+          class="w-14 lg:w-full"
           type="range"
           :min="gridParams.rotationAngle.min"
           :max="gridParams.rotationAngle.max"
@@ -134,7 +134,7 @@ const returnStep1 = () => {
           v-model="buffer"
         />
       </div>
-      <div class="grid grid-cols-2 gap-3 col-span-2 md:col-span-1 justify-center my-4">
+      <div class="grid grid-cols-2 gap-3 col-span-2 lg:col-span-1 justify-center my-4">
         <button
           class="p-2 rounded-md bg-white ring-1 ring-inset ring-gray-300"
           @click="returnStep1"

@@ -235,7 +235,7 @@ const onClickDeletePolygonBtn = () => {
 </script>
 
 <template>
-  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen md:flex">
+  <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen lg:flex">
     <!-- sidebar -->
     <div
       :class="[
@@ -269,13 +269,13 @@ const onClickDeletePolygonBtn = () => {
           v-if="currentActiveName == ''"
           :class="[
             isDesktop ? 'gird-cols-1 grid-rows-4' : 'grid-cols-4 grid-rows-1 text-sm sm:text-base',
-            'grid md:gap-4 gap-2 text-slate-800',
+            'grid lg:gap-4 gap-2 text-slate-800',
           ]"
         >
           <button
             type="button"
             @click="onClickCreatePolygonBtn"
-            class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+            class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="createPolygonActive"
           >
             ポリゴンの<br v-if="!isDesktop" />新規作成
@@ -283,7 +283,7 @@ const onClickDeletePolygonBtn = () => {
           <button
             type="button"
             @click="onClickRegisterFudepolyBtn"
-            class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+            class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="registerFudepolyActive"
           >
             筆ポリゴン<br v-if="!isDesktop" />からの登録
@@ -291,7 +291,7 @@ const onClickDeletePolygonBtn = () => {
           <button
             type="button"
             @click="onClickUpdatePolygonBtn"
-            class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+            class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="updatePolygonActive"
           >
             ポリゴンの<br v-if="!isDesktop" />更新
@@ -299,7 +299,7 @@ const onClickDeletePolygonBtn = () => {
           <button
             type="button"
             @click="onClickDeletePolygonBtn"
-            class="h-14 md:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 md:px-4 md:py-2 rounded-md border border-transparent shadow-sm"
+            class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="deletePolygonActive"
           >
             ポリゴンの<br v-if="!isDesktop" />削除

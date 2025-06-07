@@ -202,10 +202,10 @@ function setMapPosition() {
 
     <!-- 地図スタイル選択 -->
     <div
-      class="absolute bottom-10 right-2 md:top-2 md:left-2 px-4 md:p-4 h-fit w-fit rounded-3xl md:rounded-md bg-white/90 z-10"
+      class="absolute bottom-10 right-2 lg:top-2 lg:left-2 px-4 lg:p-4 h-fit w-fit rounded-3xl lg:rounded-md bg-white/90 z-10"
     >
       <fieldset role="radiogroup">
-        <div class="grid grid-cols-2 md:grid-cols-1 gap-2">
+        <div class="grid grid-cols-2 lg:grid-cols-1 gap-2">
           <label
             class="relative flex items-start"
             v-for="(map_style, index) in mapStyleProperty"
@@ -222,7 +222,7 @@ function setMapPosition() {
               />
             </div>
             <div
-              class="ml-3 text-xs md:text-sm leading-6"
+              class="ml-3 text-xs lg:text-sm leading-6"
               :class="isOnline ? 'text-gray-900' : 'text-gray-400'"
             >
               {{ map_style.name }}
