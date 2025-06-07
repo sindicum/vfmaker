@@ -170,9 +170,6 @@ function setMapPosition() {
   persistStore.centerPosition.lat = center.lat
   persistStore.centerPosition.lng = center.lng
   persistStore.centerPosition.zoom = zoom
-  // persistStore.centerPosition.lat = Math.round(center.lat * 100) / 100
-  // persistStore.centerPosition.lng = Math.round(center.lng * 100) / 100
-  // persistStore.centerPosition.zoom = Math.round(zoom * 100) / 100
 }
 </script>
 

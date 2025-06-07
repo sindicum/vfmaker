@@ -23,8 +23,9 @@ dist-ssr
 *.sw?
 
 memo.md
-trial.js
+trial*
 .env.development
 .env.production
 frontend/public/*
 temp
+CLAUDE.md
