@@ -12,7 +12,8 @@ const legendItems = [
 
 <template>
   <div class="bg-white/90 p-3 rounded-lg shadow-md text-xs">
-    <div class="font-semibold mb-2">腐植値凡例</div>
+    <div class="font-semibold">腐植値凡例</div>
+    <div class="font-semibold mb-2 text-center">(mg/kg)</div>
     <ul>
       <li v-for="item in legendItems" :key="item.value" class="flex items-center mb-0.5">
         <span class="w-4 h-4 rounded-sm border mr-2" :style="{ backgroundColor: item.color }" />
