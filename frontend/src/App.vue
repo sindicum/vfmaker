@@ -6,7 +6,7 @@ import { useStore } from '@/stores/store'
 import Header from '@/components/header/HeaderComp.vue'
 import Alert from '@/components/AlertComp.vue'
 import LoadingComp from '@/components/LoadingComp.vue'
-import ErrorBoundary from '@/components/ErrorBoundary.vue'
+// import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
 import type { MaplibreMap } from '@/types/maplibre'
 
