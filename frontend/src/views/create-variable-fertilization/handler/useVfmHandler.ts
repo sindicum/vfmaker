@@ -6,12 +6,12 @@ import geojsonRbush from '@turf/geojson-rbush'
 import { addVraMap } from './LayerHandler'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
+import { useErrorHandler } from '@/composables/useErrorHandler'
+import { createGeospatialError } from '@/utils/errorFactories'
+
 import type { FeatureCollection, Feature, Polygon, Point } from 'geojson'
 import type { MaplibreRef } from '@/types/maplibre'
 import type { BaseGrid, HumusPoints, ApplicationGridFeatures } from '@/types/geom'
-// import { useErrorHandler } from '@/composables/useErrorHandler'
-
-// import { createGeospatialError } from '@/utils/errorFactories'
 
 /**
  * @param map
@@ -22,7 +22,7 @@ import type { BaseGrid, HumusPoints, ApplicationGridFeatures } from '@/types/geo
  */
 
 export function useVfmHandler(map: MaplibreRef) {
-  // const { handleError } = useErrorHandler()
+  const { handleError } = useErrorHandler()
 
   const baseFertilizationAmount = ref(100)
   const variableFertilizationRangeRate = ref(20)
@@ -76,74 +76,73 @@ export function useVfmHandler(map: MaplibreRef) {
     humusPoints: HumusPoints,
     fiveStepsFertilization: boolean,
   ) {
-    const humusMeanFeatures = getHumusMeanFeatures(baseGrid, humusPoints)
-    // humusMeanFeaturesに対して、humus_meanの数値に基づきソート
-    const sortedFeatures = humusMeanFeatures
-      .filter((m) => m.properties !== null && typeof m.properties.humus_mean === 'number')
-      .sort((m, n) => m.properties!.humus_mean - n.properties!.humus_mean)
+    try {
+      const humusMeanFeatures = getHumusMeanFeatures(baseGrid, humusPoints)
+      // humusMeanFeaturesに対して、humus_meanの数値に基づきソート
+      const sortedFeatures = humusMeanFeatures
+        .filter((m) => m.properties !== null && typeof m.properties.humus_mean === 'number')
+        .sort((m, n) => m.properties!.humus_mean - n.properties!.humus_mean)
 
-    // キー:腐植値、値:面積合計
-    const humusMeanAreaMap = new Map<number, number>()
+      // キー:腐植値、値:面積合計
+      const humusMeanAreaMap = new Map<number, number>()
 
-    // 各腐植値をキーとした累計面積のMapオブジェクトを生成
-    sortedFeatures.forEach((el) => {
-      if (el.properties === null) return
+      // 各腐植値をキーとした累計面積のMapオブジェクトを生成
+      sortedFeatures.forEach((el) => {
+        if (el.properties === null) return
 
-      const humusMean = el.properties.humus_mean
-      const area = el.properties.area
+        const humusMean = el.properties.humus_mean
+        const area = el.properties.area
 
-      humusMeanAreaMap.set(humusMean, (humusMeanAreaMap.get(humusMean) ?? 0) + area)
-    })
+        humusMeanAreaMap.set(humusMean, (humusMeanAreaMap.get(humusMean) ?? 0) + area)
+      })
 
-    // 腐植値に応じた施肥量加減割合のMapオブジェクトを生成
-    let humusMeanFertilizerRateMap
-    if (fiveStepsFertilization) {
-      humusMeanFertilizerRateMap = distributeFertilizerRateSteps(
-        humusMeanAreaMap,
+      // 腐植値に応じた施肥量加減割合のMapオブジェクトを生成
+      let humusMeanFertilizerRateMap
+      if (fiveStepsFertilization) {
+        humusMeanFertilizerRateMap = distributeFertilizerRateSteps(
+          humusMeanAreaMap,
+          applicationStep.value,
+        )
+      } else {
+        humusMeanFertilizerRateMap = distributeFertilizerRateStepless(
+          humusMeanAreaMap,
+          applicationStep.value[4],
+        )
+      }
+      totalArea.value = 0
+      totalAmount.value = 0
+      sortedFeatures.forEach((v) => {
+        if (v.properties === null) return
+
+        const humusMean = v.properties.humus_mean
+        const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
+
+        const unit = Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor))
+        const area = v.properties.area
+        v.properties.amount_fertilization_factor = amountFertilizationFactor
+        v.properties.amount_fertilization_unit = unit
+        if (unit !== 0) {
+          totalArea.value += area
+        }
+        totalAmount.value += (unit * area) / 1000
+      })
+      applicationGridFeatures.value = sortedFeatures
+      // VraMapを表示
+      if (!map?.value) return
+      addVraMap(
+        map.value,
+        { type: 'FeatureCollection', features: applicationGridFeatures.value },
         applicationStep.value,
       )
-    } else {
-      humusMeanFertilizerRateMap = distributeFertilizerRateStepless(
-        humusMeanAreaMap,
-        applicationStep.value[4],
+    } catch (error) {
+      handleError(
+        createGeospatialError('createVfm', error as Error, {
+          gridCount: baseGrid.features.length,
+          pointCount: humusPoints.features.length,
+        }),
       )
     }
-    totalArea.value = 0
-    totalAmount.value = 0
-    sortedFeatures.forEach((v) => {
-      if (v.properties === null) return
-
-      const humusMean = v.properties.humus_mean
-      const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
-
-      const unit = Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor))
-      const area = v.properties.area
-      v.properties.amount_fertilization_factor = amountFertilizationFactor
-      v.properties.amount_fertilization_unit = unit
-      if (unit !== 0) {
-        totalArea.value += area
-      }
-      totalAmount.value += (unit * area) / 1000
-    })
-    applicationGridFeatures.value = sortedFeatures
-    // VraMapを表示
-    if (!map?.value) return
-    addVraMap(
-      map.value,
-      { type: 'FeatureCollection', features: applicationGridFeatures.value },
-      applicationStep.value,
-    )
   }
-  // エラーハンドリングを一時的にコメントアウト
-  //   try {
-  // } catch (error) {
-  //   handleError(
-  //     createGeospatialError('createVfm', error as Error, {
-  //       gridCount: baseGrid.features.length,
-  //       pointCount: humusPoints.features.length,
-  //     }),
-  //   )
-  // }
 
   // VrfMapの再作成
   function updateVrf(

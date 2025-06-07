@@ -24,20 +24,20 @@ const closeDialog = () => {
             <label class="flex items-center gap-2">
               <input
                 type="radio"
-                :checked="configPersistStore.outsideMeshClip === false"
-                @change="configPersistStore.outsideMeshClipChanged"
-                class="w-4 h-4 accent-indigo-600"
-              />
-              <span>処理を行わない</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input
-                type="radio"
                 :checked="configPersistStore.outsideMeshClip === true"
                 @change="configPersistStore.outsideMeshClipChanged"
                 class="w-4 h-4 accent-indigo-600"
               />
               <span>圃場ポリゴン形状で切り抜く</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                :checked="configPersistStore.outsideMeshClip === false"
+                @change="configPersistStore.outsideMeshClipChanged"
+                class="w-4 h-4 accent-indigo-600"
+              />
+              <span>処理を行わない</span>
             </label>
           </div>
         </div>

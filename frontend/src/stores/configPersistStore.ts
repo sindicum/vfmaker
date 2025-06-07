@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 export const useConfigPersistStore = defineStore(
   'configPersistStore',
   () => {
-    const outsideMeshClip = ref(false)
+    const outsideMeshClip = ref(true)
     const fiveStepsFertilization = ref(true)
 
     const outsideMeshClipChanged = () => {

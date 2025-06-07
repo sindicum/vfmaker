@@ -1,7 +1,7 @@
 import { useStore } from '@/stores/store'
 import { useErrorStore } from '@/stores/errorStore'
-import type { AppError } from '@/types/error'
 import { ErrorSeverity, ErrorCategory } from '@/types/error'
+import type { AppError } from '@/types/error'
 
 export function useErrorHandler() {
   const store = useStore()
@@ -16,7 +16,10 @@ export function useErrorHandler() {
 
     // ユーザー通知
     if (error.severity !== ErrorSeverity.LOW) {
-      const alertType = error.severity === ErrorSeverity.HIGH || error.severity === ErrorSeverity.CRITICAL ? 'Error' : 'Info'
+      const alertType =
+        error.severity === ErrorSeverity.HIGH || error.severity === ErrorSeverity.CRITICAL
+          ? 'Error'
+          : 'Info'
       store.setMessage(alertType, error.userMessage)
     }
 

@@ -6,15 +6,18 @@ import {
   ScaleControl,
   GeolocateControl,
 } from 'maplibre-gl'
-import { useStore, usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
+
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
-
-import type { AppError } from '@/types/error'
 import { ErrorCategory, ErrorSeverity } from '@/types/error'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+import type { AppError } from '@/types/error'
+import type { Source } from 'maplibre-gl'
 import type { MaplibreRef } from '@/types/maplibre'
 
 const store = useStore()
@@ -81,12 +84,16 @@ onMounted(() => {
 
     // ソースエラーイベントリスナーを追加
     map.value.on('sourcedata', (e) => {
-      if (e.isSourceLoaded && e.source && map.value?.getSource(e.source.id)?.loaded === false) {
+      if (
+        e.isSourceLoaded &&
+        e.source &&
+        map.value?.getSource((e.source as Source).id)?.loaded?.() === false
+      ) {
         // ソースの読み込みに失敗した場合
-        const sourceError = new Error(`Failed to load source: ${e.source.id}`)
+        const sourceError = new Error(`Failed to load source: ${(e.source as Source).id}`)
         handleError(
           createMapError('source_load_error', sourceError, {
-            sourceId: e.source.id,
+            sourceId: (e.source as Source).id,
             sourceType: e.source.type,
           }),
         )

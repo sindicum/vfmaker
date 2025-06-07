@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Dialog from '@/components/DialogComp.vue'
-import { useStore, usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 import type { Feature, Polygon } from 'geojson'

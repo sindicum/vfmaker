@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
 import { useErrorHandler } from '@/composables/useErrorHandler'
-import type { AppError } from '@/types/error'
 import { ErrorCategory, ErrorSeverity } from '@/types/error'
+import type { AppError } from '@/types/error'
 
 const hasError = ref(false)
 const { handleError } = useErrorHandler()

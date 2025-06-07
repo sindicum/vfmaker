@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useStore } from '@/stores/store'
-import type { dialogType } from '@/types/maplibre'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+
+import type { dialogType } from '@/types/maplibre'
 
 const currentDialogName = ref<dialogType>('')
 const store = useStore()

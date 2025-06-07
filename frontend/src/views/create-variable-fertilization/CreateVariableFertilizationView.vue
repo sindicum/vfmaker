@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import { useStore, usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import MapBase from '@/components/map/MapBase.vue'

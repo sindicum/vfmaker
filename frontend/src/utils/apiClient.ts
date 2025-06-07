@@ -1,12 +1,17 @@
 import { useErrorHandler } from '@/composables/useErrorHandler'
-import type { AppError } from '@/types/error'
 import { ErrorCategory, ErrorSeverity } from '@/types/error'
+
+import type { AppError } from '@/types/error'
 
 const generateErrorId = (): string => {
   return `api_error_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 }
 
-const createNetworkError = (operation: string, originalError: Error, context?: Record<string, unknown>): AppError => ({
+const createNetworkError = (
+  operation: string,
+  originalError: Error,
+  context?: Record<string, unknown>,
+): AppError => ({
   id: generateErrorId(),
   category: ErrorCategory.NETWORK,
   severity: ErrorSeverity.MEDIUM,
@@ -50,7 +55,7 @@ export const apiClient = {
         await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000))
       }
     }
-    
+
     // この行は到達しないが、TypeScriptの要求を満たすために追加
     throw lastError!
   },

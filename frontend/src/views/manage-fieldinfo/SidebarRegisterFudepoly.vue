@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { useStore, usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
+
 import {
   addPMTilesSource,
   addPMTilesLayer,

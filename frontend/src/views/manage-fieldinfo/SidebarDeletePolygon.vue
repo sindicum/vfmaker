@@ -2,7 +2,8 @@
 import { ref } from 'vue'
 import Dialog from '@/components/DialogComp.vue'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
-import { useStore, usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 
 import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'
 

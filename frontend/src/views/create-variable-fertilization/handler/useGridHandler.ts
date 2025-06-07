@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { usePersistStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 import { useStore } from '@/stores/store'
 
 import { Pool, fromUrl } from 'geotiff'
@@ -148,8 +148,8 @@ export function useGridHandler(map: MaplibreRef) {
       // 腐植値をポイントグリッドに変換
       const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
 
-      // バッファー処理後のポリゴンを5mだけ拡張（ポイントの抽出漏れをなくすため）
-      const extendedActiveFeature = turfBuffer(activeFeatureBufferComputed.value, 0.005, {
+      // バッファー処理後のポリゴンを1.5mだけ拡張（ポイントの抽出漏れをなくすため）
+      const extendedActiveFeature = turfBuffer(activeFeatureBufferComputed.value, 0.0015, {
         units: 'kilometers',
       })
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { usePersistStore, useStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 import { addEditLayer, FILL_LAYER_NAME } from './handler/LayerHandler'
 
 import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'

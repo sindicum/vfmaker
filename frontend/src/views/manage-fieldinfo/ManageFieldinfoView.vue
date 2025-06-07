@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, watch, ref, shallowRef, computed, onBeforeUnmount } from 'vue'
-import { usePersistStore, useStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
+import { usePersistStore } from '@/stores/persistStore'
 
 import MapBase from '@/components/map/MapBase.vue'
 import SidebarCreatePolygon from './SidebarCreatePolygon.vue'
