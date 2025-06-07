@@ -24,8 +24,9 @@ export function addLayer(map: MaplibreMap) {
     type: 'line',
     source: 'registeredFields',
     paint: {
-      'line-color': 'red',
-      'line-width': 2,
+      'line-color': 'blue',
+      'line-opacity': 0.6,
+      'line-width': 3,
     },
   })
 }
@@ -123,7 +124,7 @@ export function addBaseMesh(map: MaplibreMap, baseMesh: FeatureCollection) {
     source: 'base-mesh',
     paint: {
       'line-color': 'red',
-      'line-opacity': 0.5,
+      'line-opacity': 0.6,
     },
   })
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Dialog from '@/components/DialogComp.vue'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 import { useStore, usePersistStore } from '@/stores/store'
 
 import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'

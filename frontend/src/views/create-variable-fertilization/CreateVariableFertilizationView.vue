@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useStore, usePersistStore } from '@/stores/store'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import MapBase from '@/components/map/MapBase.vue'
 import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
@@ -15,12 +16,25 @@ import {
   removeHumusGrig,
   removeBaseMesh,
   removeVraMap,
+  addHumusGrid,
+  addBaseMesh,
 } from './handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+
+import {
+  intersect as turfIntersect,
+  featureCollection as turfFeatureCollection,
+  area as turfArea,
+} from '@turf/turf'
+
+import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
+import VfmConfigComp from './components/VfmConfigComp.vue'
 
 import type { MapMouseEvent, MaplibreRef } from '@/types/maplibre'
+import type { Feature, Polygon } from 'geojson'
+import type { AreaPolygon } from '@/types/geom'
 type StepStatus = 'upcoming' | 'current' | 'complete'
 
 const map = inject<MaplibreRef>('mapkey')
@@ -28,23 +42,37 @@ if (!map) throw new Error('Map instance not provided')
 
 const store = useStore()
 const persistStore = usePersistStore()
+const configPersistStore = useConfigPersistStore()
+
 const { isDesktop } = useControlScreenWidth()
 
 const step1Status = ref<StepStatus>('current')
 const step2Status = ref<StepStatus>('upcoming')
 const step3Status = ref<StepStatus>('upcoming')
 
+// 設定ダイアログの表示
+const isOpenConfig = ref(false)
+
 // グリッド編集状態
 const isInEdit = ref(false)
 
-const { area, gridRotationAngle, gridEW, gridNS, buffer, humusPoint, baseMesh, onClickField } =
-  useGridHandler(map)
+const {
+  activeFeature,
+  gridRotationAngle,
+  gridEW,
+  gridNS,
+  buffer,
+  humusPoint,
+  baseMesh,
+  onClickField,
+} = useGridHandler(map)
 
 const {
   createVfm,
   baseFertilizationAmount,
   variableFertilizationRangeRate,
   applicationGridFeatures,
+  totalArea,
   totalAmount,
 } = useVfmHandler(map)
 
@@ -92,11 +120,62 @@ watch(step2Status, (currentStatus, previousStatus) => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
+  const fiveStepsFertilizationState = configPersistStore.fiveStepsFertilization
+
   // Step2 -> Step3
   if (previousStatus === 'current' && currentStatus == 'complete') {
-    createVfm(baseMesh.value, humusPoint.value)
+    if (configPersistStore.outsideMeshClip) {
+      if (!baseMesh.value?.features || !activeFeature.value) {
+        console.warn('必要なデータが不足しています')
+        return
+      }
+
+      const intersections: AreaPolygon[] = baseMesh.value.features
+        .map((meshFeature: AreaPolygon): AreaPolygon | null => {
+          try {
+            const intersection = turfIntersect(
+              turfFeatureCollection([
+                meshFeature as Feature<Polygon>,
+                activeFeature.value! as Feature<Polygon>,
+              ]),
+            )
+
+            if (!intersection || intersection.geometry.type !== 'Polygon') {
+              return null
+            }
+
+            const area = turfArea(intersection)
+            const result: Feature<Polygon, { area: number }> = {
+              type: 'Feature',
+              geometry: intersection.geometry as Polygon,
+              properties: {
+                area,
+              },
+            }
+
+            return result
+          } catch (error) {
+            console.warn('交差計算エラー:', error)
+            return null
+          }
+        })
+        .filter((feature): feature is Feature<Polygon, { area: number }> => feature !== null)
+
+      createVfm(
+        { type: 'FeatureCollection', features: intersections },
+        humusPoint.value,
+        fiveStepsFertilizationState,
+      )
+    } else {
+      createVfm(baseMesh.value, humusPoint.value, fiveStepsFertilizationState)
+    }
 
     delayedUpdateSidebar(step3Status, 'current')
+
+    if (mapInstance) {
+      removeHumusGrig(mapInstance)
+      removeBaseMesh(mapInstance)
+    }
   }
 
   // Step2 -> Step1
@@ -135,6 +214,8 @@ watch(step3Status, (currentStatus, previousStatus) => {
   ) {
     if (mapInstance) {
       removeVraMap(mapInstance)
+      addHumusGrid(mapInstance, humusPoint.value)
+      addBaseMesh(mapInstance, baseMesh.value)
     }
     delayedUpdateSidebar(step2Status, 'current')
   }
@@ -194,13 +275,28 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     <div
       :class="[
         isDesktop
-          ? 'relative p-8 h-full bg-slate-100 min-w-84'
-          : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
+          ? 'relative p-8 h-full bg-slate-100 min-w-90'
+          : 'absolute p-2 m-2 w-[calc(100%-1rem)] min-h-10 bg-slate-100/80 rounded-md',
         'block z-20',
       ]"
     >
+      <div :class="[isDesktop ? 'top-10 right-8 ' : 'top-2 right-2', 'absolute']">
+        <button
+          class="flex items-center border border-gray-300 rounded bg-gray-200"
+          @click="isOpenConfig = true"
+          :disabled="step3Status === 'current'"
+        >
+          <Cog8ToothIcon
+            :class="[
+              step3Status === 'current' ? 'text-gray-300' : 'text-gray-700',
+              'w-5 h-5 py-0.5 ',
+            ]"
+          />
+        </button>
+      </div>
+
       <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'font-semibold']">
-        可変施肥マップの作成
+        <span>可変施肥マップの作成</span>
       </div>
       <ol
         role="list"
@@ -229,13 +325,17 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
             v-model:application-grid-features="applicationGridFeatures"
             v-model:total-amount="totalAmount"
-            v-model:area="area"
+            v-model:area="totalArea"
           />
         </li>
       </ol>
     </div>
 
     <MapBase />
-    <HumusMapLegend v-show="step3Status !== 'current'" />
+    <HumusMapLegend
+      v-show="step3Status !== 'current'"
+      class="absolute top-1/2 -translate-y-1/2 right-3"
+    />
+    <VfmConfigComp v-model:is-open-config="isOpenConfig" />
   </main>
 </template>

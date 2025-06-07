@@ -25,7 +25,7 @@ import { useCreateLayerHandler } from './handler/useCreateLayerHandler'
 import { useRegisterFudepolyHandler } from './handler/useRegisterFudepolyHandler'
 import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
 import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 
 import type { Draw, MaplibreRef } from '@/types/maplibre'
 const store = useStore()
@@ -239,7 +239,7 @@ const onClickDeletePolygonBtn = () => {
     <div
       :class="[
         isDesktop
-          ? 'relative p-8 h-full bg-slate-100 min-w-84'
+          ? 'relative p-8 h-full bg-slate-100 min-w-90'
           : 'absolute p-2 m-2 w-[calc(100%-1rem)] bg-slate-100/80 rounded-md',
         'block z-20',
       ]"

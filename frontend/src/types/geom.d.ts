@@ -2,6 +2,8 @@ import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 
 export type BaseGrid = FeatureCollection<Polygon, { area: number }>
 
+export type AreaPolygon = Feature<Polygon, { area: number }>
+
 export type HumusPoints = FeatureCollection<Point, { humus: number }>
 
 export type ApplicationGridProperties = {

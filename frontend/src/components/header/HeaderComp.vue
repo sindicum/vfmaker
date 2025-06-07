@@ -2,7 +2,7 @@
 import { RouterLink, useRoute } from 'vue-router'
 import HamburgerButton from '@/components/header/HamburgerButton.vue'
 import { ref } from 'vue'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 
 const route = useRoute()
 

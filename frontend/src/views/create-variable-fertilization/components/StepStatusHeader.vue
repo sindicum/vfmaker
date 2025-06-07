@@ -22,7 +22,7 @@ const currentStepStatus = defineModel('currentStepStatus')
         {{ id }}
       </span>
       <span
-        :class="[currentStepStatus !== 'current' ? 'text-gray-400' : 'font-medium', 'ml-1 md:mx-4']"
+        :class="[currentStepStatus !== 'current' ? 'text-gray-400' : 'font-medium', 'ml-1 md:ml-4']"
       >
         {{ name }}
       </span>

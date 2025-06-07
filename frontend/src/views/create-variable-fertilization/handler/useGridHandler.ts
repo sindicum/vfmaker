@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { usePersistStore } from '@/stores/store'
+import { useStore } from '@/stores/store'
 
 import { Pool, fromUrl } from 'geotiff'
 import proj4 from 'proj4'
@@ -21,7 +22,7 @@ import { addHumusGrid, addBaseMesh } from './LayerHandler'
 import type { MapMouseEvent, GeoJSONSource, MaplibreRef } from '@/types/maplibre'
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import type { ReadRasterResult } from 'geotiff'
-import type { BaseGrid, HumusPoints } from '@/types/geom'
+import type { AreaPolygon, BaseGrid, HumusPoints } from '@/types/geom'
 
 /**
  * @param map
@@ -34,6 +35,7 @@ import type { BaseGrid, HumusPoints } from '@/types/geom'
  */
 export function useGridHandler(map: MaplibreRef) {
   const persistStore = usePersistStore()
+  const store = useStore()
 
   const gridRotationAngle = ref<number | null>(null)
   const gridEW = ref<number>(20)
@@ -46,10 +48,9 @@ export function useGridHandler(map: MaplibreRef) {
 
   const baseMesh = ref<BaseGrid>({
     type: 'FeatureCollection',
-    features: [],
+    features: [] as AreaPolygon[],
   })
 
-  const area = ref<number>(0)
   const activeFeature = ref<Feature<Polygon, { id: string }>>()
 
   const activeFeatureBufferComputed = computed<Feature<Polygon> | undefined>(() => {
@@ -61,7 +62,6 @@ export function useGridHandler(map: MaplibreRef) {
     })
 
     if (!result) return undefined
-    area.value = turfArea(result)
     return result as Feature<Polygon> // TurfはPolygonを返す
   })
 
@@ -147,11 +147,20 @@ export function useGridHandler(map: MaplibreRef) {
       const cogSource = await extractCogSource(cogUrl, bbox3857)
       // 腐植値をポイントグリッドに変換
       const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
-      // ポリゴン内のポイントを抽出
-      const rawPoints = turfPointsWithinPolygon(
-        humusPointGridBbox,
-        activeFeatureBufferComputed.value,
-      )
+
+      // バッファー処理後のポリゴンを5mだけ拡張（ポイントの抽出漏れをなくすため）
+      const extendedActiveFeature = turfBuffer(activeFeatureBufferComputed.value, 0.005, {
+        units: 'kilometers',
+      })
+
+      if (!extendedActiveFeature) {
+        store.alertMessage.alertType = 'Error'
+        store.alertMessage.message = 'ポリゴン処理に失敗しました'
+        return
+      }
+
+      // 拡張ポリゴン内のポイントを抽出
+      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, extendedActiveFeature)
       // Point のみ抽出（MultiPointを除去）
       const filteredPoints = rawPoints.features.filter(
         (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
@@ -371,7 +380,7 @@ export function useGridHandler(map: MaplibreRef) {
   }
 
   return {
-    area,
+    activeFeature,
     gridRotationAngle,
     gridEW,
     gridNS,

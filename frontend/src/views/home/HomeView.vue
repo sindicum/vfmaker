@@ -3,12 +3,12 @@ import { onMounted, watch, inject, ref } from 'vue'
 
 import MapBase from '@/components/map/MapBase.vue'
 import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
-import { useHumusCog } from '@/components/useHumusCog'
+import { useHumusCog } from '@/composables/useHumusCog'
 import { useStore } from '@/stores/store'
 
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap } from '@/types/maplibre'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
 const { addCog } = useHumusCog(map)
 const isCogLayerVisible = ref(true)
@@ -55,7 +55,7 @@ watch(isCogLayerVisible, async () => {
 <template>
   <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen">
     <MapBase />
-    <HumusMapLegend />
+    <HumusMapLegend class="absolute top-1/2 -translate-y-1/2 right-3" />
     <div
       :class="[
         isDesktop

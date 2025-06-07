@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import StepStatusHeader from './components/StepStatusHeader.vue'
-import { useControlScreenWidth } from '@/components/useControlScreenWidth'
+import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 const step1Status = defineModel('step1Status')
 const { isDesktop } = useControlScreenWidth()
 </script>
