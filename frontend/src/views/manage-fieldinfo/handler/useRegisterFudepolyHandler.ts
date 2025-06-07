@@ -1,4 +1,8 @@
-import { union as turfUnion, featureCollection as turfFeatureCollection } from '@turf/turf'
+import {
+  union as turfUnion,
+  featureCollection as turfFeatureCollection,
+  simplify as turfSimplify,
+} from '@turf/turf'
 import {
   removePMTitlesSource,
   removePMTitlesLayer,
@@ -61,7 +65,9 @@ export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
 
     if (feature == null) return
 
-    const coordinates = feature.geometry.coordinates[0].map((f: number[]) => {
+    // turf.simplifyを使用してポイントをtolerance: 0.0001 (約10m)で間引き
+    const simplifiedFeature = turfSimplify(feature, { tolerance: 0.0001, highQuality: true })
+    const simplifiedCoordinates = simplifiedFeature.geometry.coordinates[0].map((f: number[]) => {
       const lng = f[0]
       const lat = f[1]
       return [
@@ -70,13 +76,12 @@ export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
       ]
     })
 
-    //   clickedPolygonUuidは消失。idはdrawのidが付番される。
     const newGeom = [
       {
         type: 'Feature' as const,
         geometry: {
           type: 'Polygon' as const,
-          coordinates: [coordinates],
+          coordinates: [simplifiedCoordinates],
         },
         properties: {
           mode: 'polygon',
