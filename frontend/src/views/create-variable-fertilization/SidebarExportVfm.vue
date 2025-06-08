@@ -43,11 +43,13 @@ const returnStep2 = () => {
 // 可変施肥マップの出力
 async function exportVfm() {
   const url = import.meta.env.VITE_API_URL
+  const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
   store.isLoading = true
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-api-key': apiKey,
     },
     body: JSON.stringify({
       type: 'FeatureCollection',

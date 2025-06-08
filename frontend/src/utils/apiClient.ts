@@ -1,5 +1,6 @@
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { ErrorCategory, ErrorSeverity } from '@/types/error'
+import type { FeatureCollection } from 'geojson'
 
 import type { AppError } from '@/types/error'
 
@@ -23,7 +24,7 @@ const createNetworkError = (
 })
 
 export const apiClient = {
-  async post<T>(url: string, data: unknown): Promise<T> {
+  async post<T>(url: string, data: FeatureCollection): Promise<T> {
     const { handleError } = useErrorHandler()
     const maxRetries = 3
     let lastError: Error
@@ -32,7 +33,10 @@ export const apiClient = {
       try {
         const response = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': import.meta.env.VITE_AWS_APIGATEWAY_KEY,
+          },
           body: JSON.stringify(data),
         })
 
