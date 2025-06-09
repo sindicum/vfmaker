@@ -1,10 +1,12 @@
 import { ref } from 'vue'
 import { removeEditLayer, COORDINATE_PRECISION } from './LayerHandler'
+import { usePersistStore } from '@/stores/persistStore'
 
 import type { DrawRef, MaplibreRef, MapMouseEvent } from '@/types/maplibre'
 
 export function useUpdateLayerHandler(map: MaplibreRef, draw: DrawRef) {
   const updatePolygonId = ref('')
+  const persistStore = usePersistStore()
 
   function onClickUpdateLayer() {
     const mapInstance = map?.value
@@ -32,8 +34,12 @@ export function useUpdateLayerHandler(map: MaplibreRef, draw: DrawRef) {
     if (!drawInstance) return
 
     updatePolygonId.value = e.features[0].properties.id
+    const persistStoreFeatuers = persistStore.featurecollection.features
+    const filteredFeatures = persistStoreFeatuers.filter(
+      (f) => f.properties.id == updatePolygonId.value,
+    )
 
-    const handleFeatures = e.features[0].geometry.coordinates[0].map((f: number[]) => {
+    const handleFeatures = filteredFeatures[0].geometry.coordinates[0].map((f: number[]) => {
       const lng = f[0]
       const lat = f[1]
       return [
