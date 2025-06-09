@@ -147,7 +147,6 @@ export function addVraMap(
     type: 'geojson',
     data: humusMeanFeatureCollection,
   })
-
   map?.addLayer({
     id: 'vra-map',
     type: 'fill',
@@ -162,21 +161,21 @@ export function addVraMap(
         // 設定無し
         -1,
         '#000000',
-        // // 赤
+        // // 青
         applicationStep[4],
-        '#d7191c',
-        // 橙
+        '#2b83ba',
+        // 緑
         applicationStep[3],
-        '#fdae61',
+        '#abdda4',
         // 黄
         applicationStep[2],
         '#ffffbf',
-        // 緑
+        // 橙
         applicationStep[1],
-        '#abdda4',
-        // 青
+        '#fdae61',
+        // 赤
         applicationStep[0],
-        '#2b83ba',
+        '#d7191c',
       ],
       'fill-opacity': 0.8,
     },

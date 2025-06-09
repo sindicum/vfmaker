@@ -269,15 +269,14 @@ export function useVfmHandler(map: MaplibreRef) {
   /**
    * 腐植値-面積マップから値距離ベースの重みを計算
    * @param humusMeanAreaMap キー:腐植値、値:面積合計のMap
-   * @param maxRange 重みの最大範囲（デフォルト0.2で -0.2～0.2の範囲）
+   * @param maxRange 重みの最大範囲
    * @returns キー:腐植値、値:重み のMap
    */
   function distributeFertilizerRateStepless(
     humusMeanAreaMap: Map<number, number>,
-    maxRange: number = 0.2,
+    maxRange: number,
   ): Map<number, number> {
     const result = new Map<number, number>()
-
     // 腐植値（キー）を取得し、0を除外して昇順に並べ替え
     const humusValues = Array.from(humusMeanAreaMap.keys())
     const sorted = humusValues.filter((v) => v !== 0).sort((a, b) => a - b)
@@ -308,10 +307,9 @@ export function useVfmHandler(map: MaplibreRef) {
     const baseWeights: number[] = []
     sorted.forEach((humusValue) => {
       const ratio = (humusValue - minVal) / range // 0 ～ 1
-      const weight = maxRange - 2 * maxRange * ratio // maxRange ～ -maxRange
+      const weight = 2 * maxRange * ratio - maxRange //  - maxRange ～ maxRange
       baseWeights.push(weight)
     })
-
     // Step 2: 現在の合計を計算
     const currentSum = baseWeights.reduce((sum, w) => sum + w, 0)
 
