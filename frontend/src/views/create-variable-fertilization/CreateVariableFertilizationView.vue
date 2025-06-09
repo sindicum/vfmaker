@@ -293,6 +293,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
               'w-5 h-5 py-0.5 ',
             ]"
           />
+          <div class="text-xs pr-1">設定</div>
         </button>
       </div>
 
