@@ -1,12 +1,12 @@
 <script setup lang="ts">
 const legendItems = [
-  { value: '150', color: '#2b83ba' },
-  { value: '125', color: '#80bfab' },
-  { value: '100', color: '#c7e8ad' },
-  { value: '75', color: '#ffffbf' },
-  { value: '50', color: '#fec980' },
-  { value: '25', color: '#f07c4a' },
   { value: '0', color: '#d7191c' },
+  { value: '25', color: '#f07c4a' },
+  { value: '50', color: '#fec980' },
+  { value: '75', color: '#ffffbf' },
+  { value: '100', color: '#c7e8ad' },
+  { value: '125', color: '#80bfab' },
+  { value: '150', color: '#2b83ba' },
 ]
 </script>
 
