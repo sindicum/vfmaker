@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { onMounted, watch, inject, ref } from 'vue'
+import { onMounted, watch, inject, ref, onBeforeMount } from 'vue'
 
 import MapBase from '@/components/map/MapBase.vue'
 import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
 import { useHumusCog } from '@/composables/useHumusCog'
 import { useStore } from '@/stores/store'
-
+import { usePersistStore } from '@/stores/persistStore'
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap } from '@/types/maplibre'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import {
+  addLayer,
+  addSource,
+  removeLayer,
+  removeSource,
+} from '../create-variable-fertilization/handler/LayerHandler'
+
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
 const { addCog } = useHumusCog(map)
 const isCogLayerVisible = ref(true)
 const store = useStore()
+const persistStore = usePersistStore()
 
 const { isDesktop } = useControlScreenWidth()
 
@@ -20,9 +28,19 @@ onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  mapInstance.on('load', async () => {
+  mapInstance.on('style.load', async () => {
     await addCog()
+    addSource(mapInstance, persistStore.featurecollection)
+    addLayer(mapInstance)
   })
+})
+
+onBeforeMount(() => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  removeLayer(mapInstance)
+  removeSource(mapInstance)
 })
 
 watch(
@@ -34,6 +52,8 @@ watch(
     mapInstance.once('idle', async () => {
       if (isCogLayerVisible.value) {
         await addCog()
+        addSource(mapInstance, persistStore.featurecollection)
+        addLayer(mapInstance)
       }
     })
   },
