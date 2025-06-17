@@ -283,16 +283,14 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     >
       <div :class="[isDesktop ? 'top-10 right-8 ' : 'top-2 right-2', 'absolute']">
         <button
-          class="flex items-center border border-gray-300 rounded bg-gray-200"
+          :class="[
+            step3Status === 'current' ? 'text-gray-300' : 'text-gray-700',
+            'flex items-center border border-gray-300 rounded bg-gray-200',
+          ]"
           @click="isOpenConfig = true"
           :disabled="step3Status === 'current'"
         >
-          <Cog8ToothIcon
-            :class="[
-              step3Status === 'current' ? 'text-gray-300' : 'text-gray-700',
-              'w-5 h-5 py-0.5 ',
-            ]"
-          />
+          <Cog8ToothIcon class="'w-5 h-5 py-0.5" />
           <div class="text-xs pr-1">設定</div>
         </button>
       </div>

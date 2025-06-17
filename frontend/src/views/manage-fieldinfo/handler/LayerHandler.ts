@@ -177,7 +177,7 @@ export function setupTerraDraw(map: ShallowRef<MaplibreMap | null>) {
             feature: {
               scaleable: true,
               rotateable: true,
-              draggable: true,
+              draggable: false,
               coordinates: {
                 midpoints: true,
                 draggable: true,
@@ -198,9 +198,9 @@ export function setupTerraDraw(map: ShallowRef<MaplibreMap | null>) {
           closingPointOutlineColor: '#FFFFFF',
           closingPointOutlineWidth: 2,
         },
-        pointerDistance: 30,
+        pointerDistance: 10,
         validation: (feature, { updateType }) => {
-          if (updateType === 'finish' || updateType === 'commit') {
+          if (updateType === 'finish') {
             return ValidateNotSelfIntersecting(feature)
           }
           return {

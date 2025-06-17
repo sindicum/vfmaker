@@ -35,14 +35,14 @@ export function useVfmHandler(map: MaplibreRef) {
 
   const configPersistStore = useConfigPersistStore()
 
-  // 可変施肥増減率を5段階で算出
+  // 可変施肥増減率を5段階で算出（max -> min の順）
   const applicationStep = computed<[number, number, number, number, number]>(() => {
-    const range0 = variableFertilizationRangeRate.value / 100
-    const range2 = 0
-    const range4 = (variableFertilizationRangeRate.value / 100) * -1
-    const range1 = range0 / 2
-    const range3 = range4 / 2
-    return [range0, range1, range2, range3, range4]
+    const rangeMax = variableFertilizationRangeRate.value / 100
+    const rangeMid = 0
+    const rangeMin = (variableFertilizationRangeRate.value / 100) * -1
+    const rangeMaxMid = rangeMax / 2
+    const rangeMinMid = rangeMin / 2
+    return [rangeMax, rangeMaxMid, rangeMid, rangeMinMid, rangeMin]
   })
 
   let timeoutId: number | null = null
@@ -95,7 +95,6 @@ export function useVfmHandler(map: MaplibreRef) {
 
         humusMeanAreaMap.set(humusMean, (humusMeanAreaMap.get(humusMean) ?? 0) + area)
       })
-
       // 腐植値に応じた施肥量加減割合のMapオブジェクトを生成
       let humusMeanFertilizerRateMap
       if (fiveStepsFertilization) {
@@ -104,10 +103,8 @@ export function useVfmHandler(map: MaplibreRef) {
           applicationStep.value,
         )
       } else {
-        humusMeanFertilizerRateMap = distributeFertilizerRateStepless(
-          humusMeanAreaMap,
-          applicationStep.value[4],
-        )
+        const rangeMax = applicationStep.value[0]
+        humusMeanFertilizerRateMap = distributeFertilizerRateStepless(humusMeanAreaMap, rangeMax)
       }
       totalArea.value = 0
       totalAmount.value = 0
@@ -307,7 +304,7 @@ export function useVfmHandler(map: MaplibreRef) {
     const baseWeights: number[] = []
     sorted.forEach((humusValue) => {
       const ratio = (humusValue - minVal) / range // 0 ～ 1
-      const weight = 2 * maxRange * ratio - maxRange //  - maxRange ～ maxRange
+      const weight = maxRange - 2 * maxRange * ratio //  maxRange ～ -maxRange
       baseWeights.push(weight)
     })
     // Step 2: 現在の合計を計算
@@ -385,5 +382,8 @@ export function useVfmHandler(map: MaplibreRef) {
     totalArea,
     totalAmount,
     createVfm,
+    // テスト用にエクスポート
+    distributeFertilizerRateSteps,
+    distributeFertilizerRateStepless,
   }
 }
