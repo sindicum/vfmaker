@@ -290,8 +290,8 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
           @click="isOpenConfig = true"
           :disabled="step3Status === 'current'"
         >
-          <Cog8ToothIcon class="'w-5 h-5 py-0.5" />
-          <div class="text-xs pr-1">設定</div>
+          <Cog8ToothIcon class="w-5 h-5 py-0.5" />
+          <div class="text-xs pr-1 whitespace-nowrap">設定</div>
         </button>
       </div>
 

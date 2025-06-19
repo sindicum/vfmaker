@@ -166,10 +166,8 @@ export function useVfmHandler(map: MaplibreRef) {
     if (fiveStepsFertilization) {
       humusMeanFertilizerRateMap = distributeFertilizerRateSteps(humusMeanAreaMap, applicationStep)
     } else {
-      humusMeanFertilizerRateMap = distributeFertilizerRateStepless(
-        humusMeanAreaMap,
-        applicationStep[4],
-      )
+      const rangeMax = applicationStep[0]
+      humusMeanFertilizerRateMap = distributeFertilizerRateStepless(humusMeanAreaMap, rangeMax)
     }
 
     totalAmount.value = 0
