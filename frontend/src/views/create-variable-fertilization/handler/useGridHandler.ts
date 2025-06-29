@@ -8,6 +8,7 @@ import {
   area as turfArea,
   bbox as turfBbox,
   bboxPolygon as turfBboxPolygon,
+  booleanPointInPolygon as turfBooleanPointInPolygon,
   buffer as turfBuffer,
   centroid as turfCentroid,
   destination as turfDestination,
@@ -17,7 +18,7 @@ import {
   transformRotate as turfTransformRotate,
 } from '@turf/turf'
 
-import { addHumusGrid, addBaseMesh } from './LayerHandler'
+import { addHumusGrid, addBaseMesh, addHumusRaster } from './LayerHandler'
 
 import type { MapMouseEvent, GeoJSONSource, MaplibreRef } from '@/types/maplibre'
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
@@ -45,7 +46,8 @@ export function useGridHandler(map: MaplibreRef) {
     type: 'FeatureCollection',
     features: [],
   })
-
+  const humusRaster = ref<HTMLCanvasElement | undefined>()
+  const humusRasterBbox = ref<[number, number, number, number]>([0, 0, 0, 0])
   const baseMesh = ref<BaseGrid>({
     type: 'FeatureCollection',
     features: [] as AreaPolygon[],
@@ -122,15 +124,23 @@ export function useGridHandler(map: MaplibreRef) {
       // activeFeatureBufferComputedのundefined処理
       if (!activeFeatureBufferComputed.value) return
 
-      // BoundingBoxを算出。activeFeatureBufferComputedはactiveFeatureに基づきcompute（注意）
-      const activeFeatureBufferComputedBbox = turfBbox(activeFeatureBufferComputed.value)
+      // activeFeatureのバッファー処理をしたactiveFeatureBufferComputedをさらに10m拡張（境界域の外側の腐植値を取得するため）
+      const activeFeatureBufferExtended = turfBuffer(activeFeatureBufferComputed.value, 0.01, {
+        units: 'kilometers',
+      })
+      if (!activeFeatureBufferExtended) return
+
+      // BoundingBoxを算出。
+      const activeFeatureBufferExtendedBbox = turfBbox(activeFeatureBufferExtended)
 
       const bbox4326: [number, number, number, number] = [
-        activeFeatureBufferComputedBbox[0],
-        activeFeatureBufferComputedBbox[1],
-        activeFeatureBufferComputedBbox[2],
-        activeFeatureBufferComputedBbox[3],
+        activeFeatureBufferExtendedBbox[0],
+        activeFeatureBufferExtendedBbox[1],
+        activeFeatureBufferExtendedBbox[2],
+        activeFeatureBufferExtendedBbox[3],
       ]
+
+      humusRasterBbox.value = bbox4326
 
       // CRSをEPSG:4326からEPSG:3857に変換
       const minBbox3857 = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[0], bbox4326[1]])
@@ -145,33 +155,37 @@ export function useGridHandler(map: MaplibreRef) {
       const cogUrl = import.meta.env.VITE_OM_MAP_URL
       // COGファイルより腐植値を取得
       const cogSource = await extractCogSource(cogUrl, bbox3857)
-      // 腐植値をポイントグリッドに変換
+
+      // 腐植値をラスター画像に変換
+      humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
+
+      // ラスター画像として地図に追加
+      addHumusRaster(currentMap, humusRaster.value, bbox4326)
+
+      // ポイントデータも保持（グリッド計算用）
       const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
 
-      // バッファー処理後のポリゴンを1.5mだけ拡張（ポイントの抽出漏れをなくすため）
-      const extendedActiveFeature = turfBuffer(activeFeatureBufferComputed.value, 0.0015, {
-        units: 'kilometers',
-      })
-
-      if (!extendedActiveFeature) {
+      if (!activeFeatureBufferComputed.value) {
         store.alertMessage.alertType = 'Error'
         store.alertMessage.message = 'ポリゴン処理に失敗しました'
         return
       }
 
       // 拡張ポリゴン内のポイントを抽出
-      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, extendedActiveFeature)
+      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
+
       // Point のみ抽出（MultiPointを除去）
       const filteredPoints = rawPoints.features.filter(
         (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
       )
 
-      // refに代入
+      // refに代入（VFM計算用に保持）
       humusPoint.value = {
         type: 'FeatureCollection',
         features: filteredPoints,
       }
 
+      // 腐植値のシンボル表示
       addHumusGrid(currentMap, humusPoint.value)
 
       // クリックしたポリゴンのbboxの重心を算出（回転中心点）
@@ -326,12 +340,12 @@ export function useGridHandler(map: MaplibreRef) {
 
   async function extractCogSource(
     url: string,
-    bbox: [number, number, number, number],
+    bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
     const tiff = await fromUrl(url)
     const pool = new Pool()
     const cogSource = await tiff.readRasters({
-      bbox,
+      bbox: bbox3857,
       samples: [0], // 取得するバンドを指定
       interleave: true,
       pool,
@@ -379,6 +393,129 @@ export function useGridHandler(map: MaplibreRef) {
     return featureCollection
   }
 
+  function createHumusRasterImage(
+    cogSource: ReadRasterResult,
+    polygon: Feature<Polygon>,
+  ): HTMLCanvasElement {
+    const bbox4326 = turfBbox(polygon)
+
+    // キャンバスを作成
+    const canvas = document.createElement('canvas')
+    canvas.width = cogSource.width
+    canvas.height = cogSource.height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Canvas context creation failed')
+    }
+
+    // ImageDataを作成
+    const imageData = ctx.createImageData(cogSource.width, cogSource.height)
+    const data = imageData.data
+
+    // カラーマッピング関数（既存の色スケールを使用）
+    const getColorForHumus = (humus: number): [number, number, number] => {
+      // 腐植値に基づいて色を補間
+      if (humus <= 0) return [215, 25, 28] // #d7191c
+      if (humus <= 25) {
+        const t = humus / 25
+        return [
+          Math.round(215 + (240 - 215) * t),
+          Math.round(25 + (124 - 25) * t),
+          Math.round(28 + (74 - 28) * t),
+        ]
+      }
+      if (humus <= 50) {
+        const t = (humus - 25) / 25
+        return [
+          Math.round(240 + (254 - 240) * t),
+          Math.round(124 + (201 - 124) * t),
+          Math.round(74 + (128 - 74) * t),
+        ]
+      }
+      if (humus <= 75) {
+        const t = (humus - 50) / 25
+        return [
+          Math.round(254 + (255 - 254) * t),
+          Math.round(201 + (255 - 201) * t),
+          Math.round(128 + (191 - 128) * t),
+        ]
+      }
+      if (humus <= 100) {
+        const t = (humus - 75) / 25
+        return [
+          Math.round(255 + (199 - 255) * t),
+          Math.round(255 + (232 - 255) * t),
+          Math.round(191 + (173 - 191) * t),
+        ]
+      }
+      if (humus <= 125) {
+        const t = (humus - 100) / 25
+        return [
+          Math.round(199 + (128 - 199) * t),
+          Math.round(232 + (191 - 232) * t),
+          Math.round(173 + (171 - 173) * t),
+        ]
+      }
+      if (humus <= 150) {
+        const t = (humus - 125) / 25
+        return [
+          Math.round(128 + (43 - 128) * t),
+          Math.round(191 + (131 - 191) * t),
+          Math.round(171 + (186 - 171) * t),
+        ]
+      }
+      return [43, 131, 186] // #2b83ba
+    }
+
+    // バウンディングボックスの範囲を取得
+    const bboxMinLng = bbox4326[0]
+    const bboxMinLat = bbox4326[1]
+    const bboxMaxLng = bbox4326[2]
+    const bboxMaxLat = bbox4326[3]
+
+    // COGデータをImageDataに変換
+    let cogSourcePosition = 0
+    for (let y = 0; y < cogSource.height; y++) {
+      for (let x = 0; x < cogSource.width; x++) {
+        // ピクセルの地理座標を計算
+        const lng = bboxMinLng + (x / (cogSource.width - 1)) * (bboxMaxLng - bboxMinLng)
+        const lat = bboxMaxLat - (y / (cogSource.height - 1)) * (bboxMaxLat - bboxMinLat)
+
+        // ポイントがポリゴン内にあるかチェック
+        const pointFeature = turfPoint([lng, lat])
+        const isInsidePolygon = turfBooleanPointInPolygon(pointFeature, polygon)
+
+        const pixelIndex = (y * cogSource.width + x) * 4
+
+        if (isInsidePolygon) {
+          // ポリゴン内の場合は腐植値に基づいて色を設定
+          const humus = Number(cogSource[cogSourcePosition] ?? 0)
+          const [r, g, b] = getColorForHumus(humus)
+          const opacity = 0.8
+
+          data[pixelIndex] = r
+          data[pixelIndex + 1] = g
+          data[pixelIndex + 2] = b
+          data[pixelIndex + 3] = 255 * opacity
+        } else {
+          // ポリゴン外の場合は完全に透明
+          data[pixelIndex] = 0
+          data[pixelIndex + 1] = 0
+          data[pixelIndex + 2] = 0
+          data[pixelIndex + 3] = 0
+        }
+
+        cogSourcePosition++
+      }
+    }
+
+    // ImageDataをキャンバスに描画
+    ctx.putImageData(imageData, 0, 0)
+
+    return canvas
+  }
+
   return {
     activeFeature,
     gridRotationAngle,
@@ -387,6 +524,8 @@ export function useGridHandler(map: MaplibreRef) {
     buffer,
     baseMesh,
     humusPoint,
+    humusRaster,
+    humusRasterBbox,
     onClickField,
   }
 }

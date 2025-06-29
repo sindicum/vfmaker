@@ -216,9 +216,13 @@ export function useVfmHandler(map: MaplibreRef) {
       // 初期値設定（ポリゴンに含有するポイントFeatureが無い場合は初期値のまま）
       let mean = 0
       if (contained.length > 0) {
-        // 各Featureのproperties.humusを合計し平均を算出
-        const sum = contained.reduce((humusSum, feature) => humusSum + feature.properties.humus, 0)
-        mean = sum / contained.length
+        // 各Featureのproperties.humusを合計し平均を算出（0の腐植値は除外）
+        const validContained = contained.filter((feature) => feature.properties.humus !== 0)
+        const sum = validContained.reduce(
+          (humusSum, feature) => humusSum + feature.properties.humus,
+          0,
+        )
+        mean = validContained.length > 0 ? sum / validContained.length : 0
       }
 
       const meshFeature: Feature<Polygon, { humus_mean: number; area: number }> = {

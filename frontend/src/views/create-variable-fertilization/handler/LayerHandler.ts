@@ -9,6 +9,12 @@ export function addSource(map: MaplibreMap, featureCollection: FeatureCollection
   })
 }
 
+export function removeSource(map: MaplibreMap) {
+  if (map?.getSource('registeredFields')) {
+    map.removeSource('registeredFields')
+  }
+}
+
 export function addLayer(map: MaplibreMap) {
   map?.addLayer({
     id: 'registeredFillLayer',
@@ -37,12 +43,6 @@ export function removeLayer(map: MaplibreMap | null | undefined) {
   }
   if (map?.getLayer('registeredLineLayer')) {
     map.removeLayer('registeredLineLayer')
-  }
-}
-
-export function removeSource(map: MaplibreMap) {
-  if (map?.getSource('registeredFields')) {
-    map.removeSource('registeredFields')
   }
 }
 
@@ -88,26 +88,66 @@ export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
   })
 
   // 腐植値のシンボル表示
-  // map?.addLayer({
-  //   id: 'humusGrid-label',
-  //   type: 'symbol',
-  //   source: 'humusGrid',
-  //   layout: {
-  //     'text-field': ['get', 'humus'],
-  //     'text-size': 12,
-  //   },
-  //   paint: {
-  //     'text-color': '#000000',
-  //     'text-halo-color': '#ffffff',
-  //     'text-halo-width': 1,
-  //   },
-  // })
+  map?.addLayer({
+    id: 'humusGrid-label',
+    type: 'symbol',
+    source: 'humusGrid',
+    layout: {
+      'text-field': ['get', 'humus'],
+      'text-size': 12,
+    },
+    paint: {
+      'text-color': '#000000',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1,
+    },
+  })
 }
 
 export function removeHumusGrig(map: MaplibreMap) {
+  // ポイントレイヤーの削除
   if (map && map.getLayer('humusGrid')) {
     map.removeLayer('humusGrid')
+    map.removeLayer('humusGrid-label')
     map.removeSource('humusGrid')
+  }
+}
+
+export function addHumusRaster(
+  map: MaplibreMap,
+  canvas: HTMLCanvasElement,
+  bounds: [number, number, number, number],
+) {
+  removeHumusGrig(map)
+
+  // canvasソースを追加
+  map?.addSource('humusRaster', {
+    type: 'canvas',
+    canvas: canvas,
+    coordinates: [
+      [bounds[0], bounds[3]], // 左上
+      [bounds[2], bounds[3]], // 右上
+      [bounds[2], bounds[1]], // 右下
+      [bounds[0], bounds[1]], // 左下
+    ],
+  })
+
+  // ラスターレイヤーを追加
+  map?.addLayer({
+    id: 'humusRaster',
+    type: 'raster',
+    source: 'humusRaster',
+    paint: {
+      'raster-opacity': 1,
+      'raster-resampling': 'linear', // 線形補間でスムーズな表示
+    },
+  })
+}
+
+export function removeHumusRaster(map: MaplibreMap) {
+  if (map && map.getLayer('humusRaster')) {
+    map.removeLayer('humusRaster')
+    map.removeSource('humusRaster')
   }
 }
 

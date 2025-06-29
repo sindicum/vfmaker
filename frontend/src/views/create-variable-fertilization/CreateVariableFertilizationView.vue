@@ -11,14 +11,17 @@ import setGridPosition from './SidebarSetGridPosition.vue'
 import exportVfm from './SidebarExportVfm.vue'
 import {
   addSource,
+  removeSource,
   addLayer,
   removeLayer,
-  removeSource,
-  removeHumusGrig,
-  removeBaseMesh,
-  removeVraMap,
   addHumusGrid,
+  removeHumusGrig,
   addBaseMesh,
+  removeBaseMesh,
+  addVraMap,
+  removeVraMap,
+  addHumusRaster,
+  removeHumusRaster,
 } from './handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
@@ -63,8 +66,10 @@ const {
   gridEW,
   gridNS,
   buffer,
-  humusPoint,
   baseMesh,
+  humusPoint,
+  humusRaster,
+  humusRasterBbox,
   onClickField,
 } = useGridHandler(map)
 
@@ -175,6 +180,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
 
     if (mapInstance) {
       removeHumusGrig(mapInstance)
+      removeHumusRaster(mapInstance)
       removeBaseMesh(mapInstance)
     }
   }
@@ -185,6 +191,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
 
     if (mapInstance) {
       removeHumusGrig(mapInstance)
+      removeHumusRaster(mapInstance)
       removeBaseMesh(mapInstance)
     }
   }
@@ -215,6 +222,7 @@ watch(step3Status, (currentStatus, previousStatus) => {
   ) {
     if (mapInstance) {
       removeVraMap(mapInstance)
+      addHumusRaster(mapInstance, humusRaster.value, humusRasterBbox.value)
       addHumusGrid(mapInstance, humusPoint.value)
       addBaseMesh(mapInstance, baseMesh.value)
     }
