@@ -3,7 +3,7 @@ import type { TerraDraw } from 'terra-draw'
 import type { ShallowRef } from 'vue'
 
 export type MaplibreMap = Map | null
-export type MapMouseEvent = MapMouseEven
+export type MapMouseEvent = MapMouseEvent
 export type GeoJSONSource = GeoJSONSource
 
 export type RasterSourceSpecification = RasterSourceSpecification

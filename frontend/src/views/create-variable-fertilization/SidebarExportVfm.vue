@@ -21,7 +21,7 @@ const { isDesktop } = useControlScreenWidth()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
-  variableFertilizationRangeRate: { min: 0, max: 100 },
+  variableFertilizationRangeRate: { min: 1, max: 99 },
 }
 
 // ボタン入力ダイアログを表示

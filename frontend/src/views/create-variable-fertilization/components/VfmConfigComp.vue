@@ -68,6 +68,23 @@ const closeDialog = () => {
           </div>
         </div>
 
+        <!-- 腐植値の表示 -->
+        <div class="my-6">
+          <div class="text-rose-600 mb-1">腐植値の表示（mg/kg）</div>
+          <div class="border-b border-gray-300 mb-2"></div>
+          <div class="flex flex-col gap-2 ml-2">
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                :checked="configPersistStore.humusSymbolIsVisible"
+                @change="configPersistStore.humusSymbolIsVisibleChanged"
+                class="w-4 h-4 accent-indigo-600"
+              />
+              <span>腐植値を表示する</span>
+            </label>
+          </div>
+        </div>
+
         <!-- 閉じるボタン -->
         <div class="flex justify-center">
           <button @click="closeDialog" class="h-12 w-28 bg-amber-300 hover:bg-amber-400 rounded-md">

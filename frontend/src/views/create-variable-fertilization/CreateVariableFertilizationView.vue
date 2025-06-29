@@ -15,7 +15,7 @@ import {
   addLayer,
   removeLayer,
   addHumusGrid,
-  removeHumusGrig,
+  removeHumusGrid,
   addBaseMesh,
   removeBaseMesh,
   addVraMap,
@@ -101,7 +101,8 @@ onBeforeUnmount(() => {
 
   removeLayer(mapInstance)
   removeSource(mapInstance)
-  removeHumusGrig(mapInstance)
+  removeHumusGrid(mapInstance)
+  removeHumusRaster(mapInstance)
   removeBaseMesh(mapInstance)
   removeVraMap(mapInstance)
 
@@ -118,6 +119,8 @@ watch(step1Status, (currentStatus, previousStatus) => {
   }
   // Step2 or Step3 -> Step1
   if (currentStatus === 'current') {
+    // バッファーの初期化（グリッド幅はユーザー設定を生かす）
+    buffer.value = 0
     isInEdit.value = false
   }
 })
@@ -179,7 +182,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
     delayedUpdateSidebar(step3Status, 'current')
 
     if (mapInstance) {
-      removeHumusGrig(mapInstance)
+      removeHumusGrid(mapInstance)
       removeHumusRaster(mapInstance)
       removeBaseMesh(mapInstance)
     }
@@ -190,7 +193,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
     delayedUpdateSidebar(step1Status, 'current')
 
     if (mapInstance) {
-      removeHumusGrig(mapInstance)
+      removeHumusGrid(mapInstance)
       removeHumusRaster(mapInstance)
       removeBaseMesh(mapInstance)
     }
@@ -208,7 +211,7 @@ watch(step3Status, (currentStatus, previousStatus) => {
     delayedUpdateSidebar(step3Status, 'upcoming')
 
     if (mapInstance) {
-      removeHumusGrig(mapInstance)
+      removeHumusGrid(mapInstance)
       removeBaseMesh(mapInstance)
       removeVraMap(mapInstance)
     }
@@ -222,8 +225,12 @@ watch(step3Status, (currentStatus, previousStatus) => {
   ) {
     if (mapInstance) {
       removeVraMap(mapInstance)
-      addHumusRaster(mapInstance, humusRaster.value, humusRasterBbox.value)
-      addHumusGrid(mapInstance, humusPoint.value)
+      if (humusRaster.value) {
+        addHumusRaster(mapInstance, humusRaster.value, humusRasterBbox.value)
+      }
+      if (configPersistStore.humusSymbolIsVisible) {
+        addHumusGrid(mapInstance, humusPoint.value)
+      }
       addBaseMesh(mapInstance, baseMesh.value)
     }
     delayedUpdateSidebar(step2Status, 'current')
@@ -250,6 +257,18 @@ watch(
   },
 )
 
+watch(
+  () => configPersistStore.humusSymbolIsVisible,
+  () => {
+    if (map?.value && configPersistStore.humusSymbolIsVisible) {
+      addHumusGrid(map.value, humusPoint.value)
+    }
+
+    if (map?.value && !configPersistStore.humusSymbolIsVisible) {
+      removeHumusGrid(map.value)
+    }
+  },
+)
 /**
  * マップクリックによりonClickField()を呼び出す
  * @param e マップクリックイベント

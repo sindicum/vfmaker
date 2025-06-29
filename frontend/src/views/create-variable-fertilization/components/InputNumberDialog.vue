@@ -8,7 +8,7 @@ const gridParams = {
   gridNS: { min: 10, max: 50 },
   buffer: { min: -20, max: 20 },
   baseFertilizationAmount: { min: 1, max: 999 },
-  variableFertilizationRangeRate: { min: 0, max: 100 },
+  variableFertilizationRangeRate: { min: 1, max: 99 },
 }
 const dialogName = defineModel<dialogType>('dialogName')
 const inputNumber = ref('0')

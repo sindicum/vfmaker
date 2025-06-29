@@ -47,45 +47,45 @@ export function removeLayer(map: MaplibreMap | null | undefined) {
 }
 
 export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
-  removeHumusGrig(map)
+  removeHumusGrid(map)
 
   map?.addSource('humusGrid', {
     type: 'geojson',
     data: humusGrid,
   })
 
-  map?.addLayer({
-    id: 'humusGrid',
-    type: 'circle',
-    source: 'humusGrid',
-    paint: {
-      'circle-color': [
-        // interpolateを指定
-        'interpolate',
-        // 補間形式を指定（配列）
-        ['linear'],
-        // 基準値の要素を指定
-        ['get', 'humus'],
-        // 基準値（入力）と色（出力）を交互に指定
-        0,
-        '#d7191c',
-        25,
-        '#f07c4a',
-        50,
-        '#fec980',
-        75,
-        '#ffffbf',
-        100,
-        '#c7e8ad',
-        125,
-        '#80bfab',
-        150,
-        '#2b83ba',
-      ],
-      'circle-radius': 5,
-      'circle-opacity': 0.8,
-    },
-  })
+  // map?.addLayer({
+  //   id: 'humusGrid',
+  //   type: 'circle',
+  //   source: 'humusGrid',
+  //   paint: {
+  //     'circle-color': [
+  //       // interpolateを指定
+  //       'interpolate',
+  //       // 補間形式を指定（配列）
+  //       ['linear'],
+  //       // 基準値の要素を指定
+  //       ['get', 'humus'],
+  //       // 基準値（入力）と色（出力）を交互に指定
+  //       0,
+  //       '#d7191c',
+  //       25,
+  //       '#f07c4a',
+  //       50,
+  //       '#fec980',
+  //       75,
+  //       '#ffffbf',
+  //       100,
+  //       '#c7e8ad',
+  //       125,
+  //       '#80bfab',
+  //       150,
+  //       '#2b83ba',
+  //     ],
+  //     'circle-radius': 5,
+  //     'circle-opacity': 0.8,
+  //   },
+  // })
 
   // 腐植値のシンボル表示
   map?.addLayer({
@@ -104,10 +104,11 @@ export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
   })
 }
 
-export function removeHumusGrig(map: MaplibreMap) {
+export function removeHumusGrid(map: MaplibreMap) {
   // ポイントレイヤーの削除
-  if (map && map.getLayer('humusGrid')) {
-    map.removeLayer('humusGrid')
+  if (map && map.getLayer('humusGrid-label')) {
+    // if (map && map.getLayer('humusGrid')) {
+    // map.removeLayer('humusGrid')
     map.removeLayer('humusGrid-label')
     map.removeSource('humusGrid')
   }
@@ -118,7 +119,7 @@ export function addHumusRaster(
   canvas: HTMLCanvasElement,
   bounds: [number, number, number, number],
 ) {
-  removeHumusGrig(map)
+  removeHumusGrid(map)
 
   // canvasソースを追加
   map?.addSource('humusRaster', {
@@ -138,7 +139,7 @@ export function addHumusRaster(
     type: 'raster',
     source: 'humusRaster',
     paint: {
-      'raster-opacity': 1,
+      'raster-opacity': 0.95,
       'raster-resampling': 'linear', // 線形補間でスムーズな表示
     },
   })

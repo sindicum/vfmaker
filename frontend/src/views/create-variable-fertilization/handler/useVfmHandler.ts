@@ -1,6 +1,10 @@
 import { ref, computed, watch } from 'vue'
 
-import { booleanPointInPolygon as turfBooleanPointInPolygon } from '@turf/turf'
+import {
+  booleanPointInPolygon as turfBooleanPointInPolygon,
+  centroid as turfCentroid,
+  distance as turfDistance,
+} from '@turf/turf'
 import type { GeoJSONSource } from 'maplibre-gl'
 import geojsonRbush from '@turf/geojson-rbush'
 import { addVraMap } from './LayerHandler'
@@ -37,9 +41,18 @@ export function useVfmHandler(map: MaplibreRef) {
 
   // 可変施肥増減率を5段階で算出（max -> min の順）
   const applicationStep = computed<[number, number, number, number, number]>(() => {
-    const rangeMax = variableFertilizationRangeRate.value / 100
+    // 可変施肥増減率が0または100の場合は1または99に変換（applicationStepの値に差を設けるため）
+    let effectiveRate
+    if (variableFertilizationRangeRate.value === 0) {
+      effectiveRate = 1
+    } else if (variableFertilizationRangeRate.value === 100) {
+      effectiveRate = 99
+    } else {
+      effectiveRate = variableFertilizationRangeRate.value
+    }
+    const rangeMax = effectiveRate / 100
     const rangeMid = 0
-    const rangeMin = (variableFertilizationRangeRate.value / 100) * -1
+    const rangeMin = (effectiveRate / 100) * -1
     const rangeMaxMid = rangeMax / 2
     const rangeMinMid = rangeMin / 2
     return [rangeMax, rangeMaxMid, rangeMid, rangeMinMid, rangeMin]
@@ -205,6 +218,9 @@ export function useVfmHandler(map: MaplibreRef) {
     const index = geojsonRbush<Point>()
     index.load(points) // ポイント集合をインデックスに登録
 
+    // デバッグ用カウンター
+    // let interpolatedMeshCount = 0
+
     for (let i = 0; i < polygons.features.length; i++) {
       // ポリゴンのbboxで検索
       const candidates = index.search(polygons.features[i])
@@ -223,6 +239,61 @@ export function useVfmHandler(map: MaplibreRef) {
           0,
         )
         mean = validContained.length > 0 ? sum / validContained.length : 0
+      } else if (contained.length === 0) {
+        // メッシュ内にポイントがない場合、近隣から探索
+        const meshCentroid = turfCentroid(polygons.features[i])
+        const searchRadiusKm = 0.0071 // 7.1m をkm単位で表現（5m*1.414=7.1m）
+
+        const lat = meshCentroid.geometry.coordinates[1]
+        const latRad = (lat * Math.PI) / 180
+        const lonDegreePerKm = 1 / (111.32 * Math.cos(latRad))
+
+        const expandedBbox = [
+          meshCentroid.geometry.coordinates[0] - searchRadiusKm * lonDegreePerKm, // 経度方向の動的計算
+          meshCentroid.geometry.coordinates[1] - searchRadiusKm / 111, // 緯度方向の概算
+          meshCentroid.geometry.coordinates[0] + searchRadiusKm * lonDegreePerKm,
+          meshCentroid.geometry.coordinates[1] + searchRadiusKm / 111,
+        ] as [number, number, number, number]
+
+        const nearbyPoints = index.search({
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [expandedBbox[0], expandedBbox[1]],
+                [expandedBbox[2], expandedBbox[1]],
+                [expandedBbox[2], expandedBbox[3]],
+                [expandedBbox[0], expandedBbox[3]],
+                [expandedBbox[0], expandedBbox[1]],
+              ],
+            ],
+          },
+          properties: {},
+        })
+
+        // 最も近い有効なポイントを探す
+        let minDistance = Infinity
+        let nearestPoint: Feature<Point, { humus: number }> | null = null
+
+        for (const point of nearbyPoints.features) {
+          if (
+            point.properties &&
+            typeof point.properties.humus === 'number' &&
+            point.properties.humus !== 0
+          ) {
+            const dist = turfDistance(meshCentroid, point, { units: 'kilometers' })
+            if (dist <= searchRadiusKm && dist < minDistance) {
+              minDistance = dist
+              nearestPoint = point as Feature<Point, { humus: number }>
+            }
+          }
+        }
+
+        if (nearestPoint) {
+          mean = nearestPoint.properties.humus
+          // interpolatedMeshCount++
+        }
       }
 
       const meshFeature: Feature<Polygon, { humus_mean: number; area: number }> = {
@@ -235,6 +306,13 @@ export function useVfmHandler(map: MaplibreRef) {
       }
       humusMeanFeatures.push(meshFeature)
     }
+
+    // デバッグ情報を出力
+    // if (interpolatedMeshCount > 0) {
+    //   console.log(
+    //     `極小メッシュの補間処理: ${interpolatedMeshCount}個のメッシュで近隣ポイントから腐植値を取得しました`,
+    //   )
+    // }
 
     return humusMeanFeatures
   }

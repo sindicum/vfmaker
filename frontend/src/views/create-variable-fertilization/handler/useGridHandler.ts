@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { usePersistStore } from '@/stores/persistStore'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStore } from '@/stores/store'
 
 import { Pool, fromUrl } from 'geotiff'
@@ -36,6 +37,7 @@ import type { AreaPolygon, BaseGrid, HumusPoints } from '@/types/geom'
  */
 export function useGridHandler(map: MaplibreRef) {
   const persistStore = usePersistStore()
+  const configPersistStore = useConfigPersistStore()
   const store = useStore()
 
   const gridRotationAngle = ref<number | null>(null)
@@ -185,8 +187,10 @@ export function useGridHandler(map: MaplibreRef) {
         features: filteredPoints,
       }
 
-      // 腐植値のシンボル表示
-      addHumusGrid(currentMap, humusPoint.value)
+      if (configPersistStore.humusSymbolIsVisible) {
+        // 腐植値のシンボル表示
+        addHumusGrid(currentMap, humusPoint.value)
+      }
 
       // クリックしたポリゴンのbboxの重心を算出（回転中心点）
       const centroid = turfCentroid(turfBboxPolygon(bbox4326))
@@ -492,7 +496,7 @@ export function useGridHandler(map: MaplibreRef) {
           // ポリゴン内の場合は腐植値に基づいて色を設定
           const humus = Number(cogSource[cogSourcePosition] ?? 0)
           const [r, g, b] = getColorForHumus(humus)
-          const opacity = 0.8
+          const opacity = 1
 
           data[pixelIndex] = r
           data[pixelIndex + 1] = g
