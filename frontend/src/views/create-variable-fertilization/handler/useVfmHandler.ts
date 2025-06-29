@@ -127,7 +127,11 @@ export function useVfmHandler(map: MaplibreRef) {
         const humusMean = v.properties.humus_mean
         const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
 
-        const unit = Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor))
+        // 施肥量がマイナスの場合は0にする
+        const unit = Math.max(
+          0,
+          Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor)),
+        )
         const area = v.properties.area
         v.properties.amount_fertilization_factor = amountFertilizationFactor
         v.properties.amount_fertilization_unit = unit
@@ -191,7 +195,8 @@ export function useVfmHandler(map: MaplibreRef) {
       const humusMean = v.properties.humus_mean
       const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
 
-      const unit = Math.round(fertilizationAmount * (1 + amountFertilizationFactor))
+      // 施肥量がマイナスの場合は0にする
+      const unit = Math.max(0, Math.round(fertilizationAmount * (1 + amountFertilizationFactor)))
       const area = v.properties.area
       v.properties.amount_fertilization_factor = amountFertilizationFactor
       v.properties.amount_fertilization_unit = unit
@@ -382,19 +387,28 @@ export function useVfmHandler(map: MaplibreRef) {
 
     // Step 1: 値の距離ベースで基本重みを計算
     const baseWeights: number[] = []
+    const areas: number[] = []
+
     sorted.forEach((humusValue) => {
       const ratio = (humusValue - minVal) / range // 0 ～ 1
       const weight = maxRange - 2 * maxRange * ratio //  maxRange ～ -maxRange
       baseWeights.push(weight)
+      areas.push(humusMeanAreaMap.get(humusValue)!)
     })
-    // Step 2: 現在の合計を計算
-    const currentSum = baseWeights.reduce((sum, w) => sum + w, 0)
 
-    // Step 3: 各重みから平均値を引いて合計を0に調整
-    const adjustment = currentSum / n
-    const adjustedWeights = baseWeights.map((w) => w - adjustment)
+    // Step 2: 総面積を計算
+    const totalArea = areas.reduce((sum, area) => sum + area, 0)
 
-    // Step 4: 結果をMapに格納
+    // Step 3: 面積加重平均を計算
+    let weightedSum = 0
+    for (let i = 0; i < n; i++) {
+      weightedSum += baseWeights[i] * (areas[i] / totalArea)
+    }
+
+    // Step 4: 面積加重平均を引いて調整
+    const adjustedWeights = baseWeights.map((w) => w - weightedSum)
+
+    // Step 5: 結果をMapに格納
     sorted.forEach((humusValue, idx) => {
       result.set(humusValue, Number(adjustedWeights[idx].toFixed(10)))
     })
