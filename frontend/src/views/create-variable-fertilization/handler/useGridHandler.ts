@@ -496,7 +496,8 @@ export function useGridHandler(map: MaplibreRef) {
           // ポリゴン内の場合は腐植値に基づいて色を設定
           const humus = Number(cogSource[cogSourcePosition] ?? 0)
           const [r, g, b] = getColorForHumus(humus)
-          const opacity = 1
+          // 腐植値が0の場合は透明にする
+          const opacity = humus === 0 ? 0 : 1
 
           data[pixelIndex] = r
           data[pixelIndex + 1] = g
