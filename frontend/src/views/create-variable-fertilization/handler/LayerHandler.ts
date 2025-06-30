@@ -133,16 +133,19 @@ export function addHumusRaster(
     ],
   })
 
-  // ラスターレイヤーを追加
-  map?.addLayer({
-    id: 'humusRaster',
-    type: 'raster',
-    source: 'humusRaster',
-    paint: {
-      'raster-opacity': 0.95,
-      'raster-resampling': 'linear', // 線形補間でスムーズな表示
+  // ラスターレイヤーを追加（registeredLineLayerの下に配置）
+  map?.addLayer(
+    {
+      id: 'humusRaster',
+      type: 'raster',
+      source: 'humusRaster',
+      paint: {
+        'raster-opacity': 0.95,
+        'raster-resampling': 'nearest',
+      },
     },
-  })
+    'registeredLineLayer',
+  )
 }
 
 export function removeHumusRaster(map: MaplibreMap) {
