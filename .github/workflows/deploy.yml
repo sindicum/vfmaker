@@ -1,4 +1,4 @@
-name: Deploy Vue SPA to S3
+name: Deploy Vue SPA to S3 on main branch
 on:
   push:
     branches: [main]
