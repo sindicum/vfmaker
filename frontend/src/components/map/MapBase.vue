@@ -116,15 +116,22 @@ onMounted(() => {
     map.value.addControl(new ScaleControl())
     map.value.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
 
-    map.value.addControl(
-      new GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-      }),
-      isDesktop.value ? 'top-right' : 'bottom-left',
-    )
+    const geolocateControl = new GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true,
+      },
+      trackUserLocation: true,
+    })
+
+    map.value.addControl(geolocateControl, isDesktop.value ? 'top-right' : 'bottom-left')
+
+    geolocateControl.on('geolocate', (e) => {
+      // e.coords には GeolocationPosition.coords が入っている
+      const latitude = e.coords.latitude
+      const longitude = e.coords.longitude
+
+      store.setMessage('Info', `緯度${latitude},経度${longitude}`)
+    })
 
     store.mapLoaded = true
     map.value.on('moveend', setMapPosition)
