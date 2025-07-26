@@ -3,7 +3,8 @@ import { usePersistStore } from '@/stores/persistStore'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStore } from '@/stores/store'
 
-import { Pool, fromUrl } from 'geotiff'
+import { fromUrl } from 'geotiff'
+import { getSharedPool, resetPool } from '@/utils/geotiffPool'
 import proj4 from 'proj4'
 import {
   area as turfArea,
@@ -156,41 +157,41 @@ export function useGridHandler(map: MaplibreRef) {
 
       const cogUrl = import.meta.env.VITE_OM_MAP_URL
       // COGファイルより腐植値を取得
-      // const cogSource = await extractCogSource(cogUrl, bbox3857)
+      const cogSource = await extractCogSource(cogUrl, bbox3857)
 
-      // // 腐植値をラスター画像に変換
-      // humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
+      // 腐植値をラスター画像に変換
+      humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
 
-      // // ラスター画像として地図に追加
-      // addHumusRaster(currentMap, humusRaster.value, bbox4326)
+      // ラスター画像として地図に追加
+      addHumusRaster(currentMap, humusRaster.value, bbox4326)
 
-      // // ポイントデータも保持（グリッド計算用）
-      // const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
+      // ポイントデータも保持（グリッド計算用）
+      const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
 
-      // if (!activeFeatureBufferComputed.value) {
-      //   store.alertMessage.alertType = 'Error'
-      //   store.alertMessage.message = 'ポリゴン処理に失敗しました'
-      //   return
-      // }
+      if (!activeFeatureBufferComputed.value) {
+        store.alertMessage.alertType = 'Error'
+        store.alertMessage.message = 'ポリゴン処理に失敗しました'
+        return
+      }
 
-      // // 拡張ポリゴン内のポイントを抽出
-      // const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
+      // 拡張ポリゴン内のポイントを抽出
+      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
 
-      // // Point のみ抽出（MultiPointを除去）
-      // const filteredPoints = rawPoints.features.filter(
-      //   (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
-      // )
+      // Point のみ抽出（MultiPointを除去）
+      const filteredPoints = rawPoints.features.filter(
+        (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
+      )
 
-      // // refに代入（VFM計算用に保持）
-      // humusPoint.value = {
-      //   type: 'FeatureCollection',
-      //   features: filteredPoints,
-      // }
+      // refに代入（VFM計算用に保持）
+      humusPoint.value = {
+        type: 'FeatureCollection',
+        features: filteredPoints,
+      }
 
-      // if (configPersistStore.humusSymbolIsVisible) {
-      //   // 腐植値のシンボル表示
-      //   addHumusGrid(currentMap, humusPoint.value)
-      // }
+      if (configPersistStore.humusSymbolIsVisible) {
+        // 腐植値のシンボル表示
+        addHumusGrid(currentMap, humusPoint.value)
+      }
 
       // クリックしたポリゴンのbboxの重心を算出（回転中心点）
       const centroid = turfCentroid(turfBboxPolygon(bbox4326))
@@ -346,15 +347,30 @@ export function useGridHandler(map: MaplibreRef) {
     url: string,
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
-    const tiff = await fromUrl(url)
-    const pool = new Pool()
-    const cogSource = await tiff.readRasters({
-      bbox: bbox3857,
-      samples: [0], // 取得するバンドを指定
-      interleave: true,
-      pool,
-    }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
-    return cogSource
+    try {
+      const tiff = await fromUrl(url)
+      const pool = getSharedPool()
+      const cogSource = await tiff.readRasters({
+        bbox: bbox3857,
+        samples: [0], // 取得するバンドを指定
+        interleave: true,
+        pool,
+      }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
+      return cogSource
+    } catch (error) {
+      // iOS ChromeでPoolエラーが発生した場合、Poolなしで再試行
+      console.warn('GeoTIFF Pool error, retrying without pool:', error)
+      resetPool() // Poolをリセット
+      
+      const tiff = await fromUrl(url)
+      const cogSource = await tiff.readRasters({
+        bbox: bbox3857,
+        samples: [0],
+        interleave: true,
+        // poolを指定しない
+      })
+      return cogSource
+    }
   }
 
   function getHumusPointGridBbox(

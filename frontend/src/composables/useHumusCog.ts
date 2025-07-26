@@ -1,7 +1,8 @@
 import { addProtocol } from 'maplibre-gl'
 import { encode } from 'fast-png'
-import { Pool, fromUrl } from 'geotiff'
+import { fromUrl } from 'geotiff'
 import { useErrorHandler, createGeospatialError } from '@/errors'
+import { getSharedPool, resetPool } from '@/utils/geotiffPool'
 
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap, RasterSourceSpecification } from '@/types/maplibre'
@@ -88,8 +89,6 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
   }
 
   const addProtocolCog = (tiff: GeoTIFF) => {
-    const pool = new Pool()
-
     addProtocol('cog', async (params) => {
       try {
         if (!params.url) throw new Error('Invalid COG URL')
@@ -102,14 +101,33 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
         const bbox = tileToMercatorBBox(x, y, z)
 
-        const cogData = await tiff.readRasters({
-          bbox,
-          samples: [0], // 取得するバンドを指定
-          width: tileSize,
-          height: tileSize,
-          interleave: true,
-          pool,
-        })
+        let cogData
+        try {
+          // 共有Poolを使用
+          const pool = getSharedPool()
+          cogData = await tiff.readRasters({
+            bbox,
+            samples: [0], // 取得するバンドを指定
+            width: tileSize,
+            height: tileSize,
+            interleave: true,
+            pool,
+          })
+        } catch (poolError) {
+          // iOS ChromeでPoolエラーが発生した場合、Poolなしで再試行
+          if (import.meta.env.MODE !== 'production') {
+            console.warn('COG tile pool error, retrying without pool:', poolError)
+          }
+          resetPool()
+          cogData = await tiff.readRasters({
+            bbox,
+            samples: [0],
+            width: tileSize,
+            height: tileSize,
+            interleave: true,
+            // poolを指定しない
+          })
+        }
 
         const rgbaData = []
 
