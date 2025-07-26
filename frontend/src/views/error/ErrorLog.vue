@@ -9,7 +9,7 @@ const errorStore = useErrorStore()
 // フィルタの状態
 const selectedCategory = ref<ErrorCategory | 'all'>('all')
 const selectedSeverity = ref<ErrorSeverity | 'all'>('all')
-const expandedErrors = ref<Set<string>>(new Set())
+const expandedErrors = ref<Record<string, boolean>>({})
 
 // フィルタされたエラー
 const filteredErrors = computed(() => {
@@ -28,11 +28,7 @@ const filteredErrors = computed(() => {
 
 // エラー詳細の展開・折りたたみ
 const toggleError = (errorId: string) => {
-  if (expandedErrors.value.has(errorId)) {
-    expandedErrors.value.delete(errorId)
-  } else {
-    expandedErrors.value.add(errorId)
-  }
+  expandedErrors.value[errorId] = !expandedErrors.value[errorId]
 }
 
 // エラーのクリア
@@ -89,6 +85,29 @@ const getSeverityColor = (severity: ErrorSeverity) => {
 // AggregateErrorかどうかチェック
 const isAggregateError = (error: any): error is AggregateError => {
   return error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)
+}
+
+// エラー情報を安全に取得
+const getErrorInfo = (error: any) => {
+  try {
+    return {
+      name: error?.name || 'Unknown',
+      message: error?.message || 'No message',
+      stack: error?.stack ? String(error.stack).slice(0, 1000) : '' // 最大1000文字
+    }
+  } catch {
+    return { name: 'Error', message: 'Cannot read error', stack: '' }
+  }
+}
+
+// AggregateErrorを安全に処理
+const getSafeAggregateErrors = (error: any) => {
+  try {
+    if (!isAggregateError(error)) return []
+    return error.errors.slice(0, 10).map(getErrorInfo) // 最大10個まで
+  } catch {
+    return []
+  }
 }
 </script>
 
@@ -188,7 +207,7 @@ const isAggregateError = (error: any): error is AggregateError => {
                   <p class="text-sm text-gray-600 mt-1">{{ error.userMessage }}</p>
                 </div>
                 <svg
-                  :class="[expandedErrors.has(error.id) ? 'rotate-180' : '', 'w-5 h-5 text-gray-400 transition-transform']"
+                  :class="[expandedErrors[error.id] ? 'rotate-180' : '', 'w-5 h-5 text-gray-400 transition-transform']"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -199,33 +218,33 @@ const isAggregateError = (error: any): error is AggregateError => {
             </div>
             
             <!-- エラー詳細 -->
-            <div v-if="expandedErrors.has(error.id)" class="p-4 bg-white border-t border-gray-200">
+            <div v-show="expandedErrors[error.id]" class="p-4 bg-white border-t border-gray-200">
               <!-- Original Error -->
               <div v-if="error.originalError" class="mb-4">
                 <h4 class="font-semibold text-gray-700 mb-2">Original Error:</h4>
                 <div class="bg-gray-100 p-3 rounded text-sm font-mono">
-                  <div class="text-red-600">{{ error.originalError.name }}: {{ error.originalError.message }}</div>
+                  <div class="text-red-600">{{ getErrorInfo(error.originalError).name }}: {{ getErrorInfo(error.originalError).message }}</div>
                   
                   <!-- AggregateError の詳細 -->
                   <div v-if="isAggregateError(error.originalError)" class="mt-3">
-                    <div class="font-semibold mb-2">AggregateError contains {{ error.originalError.errors.length }} errors:</div>
+                    <div class="font-semibold mb-2">AggregateError contains {{ getSafeAggregateErrors(error.originalError).length }} errors:</div>
                     <div
-                      v-for="(subError, index) in error.originalError.errors"
-                      :key="index"
+                      v-for="(subError, index) in getSafeAggregateErrors(error.originalError)"
+                      :key="`${error.id}-sub-${index}`"
                       class="ml-4 mb-2 p-2 bg-gray-200 rounded"
                     >
                       <div class="text-red-600">
-                        Error {{ index + 1 }}: {{ subError.name || 'Error' }} - {{ subError.message }}
+                        Error {{ index + 1 }}: {{ subError.name }} - {{ subError.message }}
                       </div>
-                      <div v-if="subError.stack" class="text-xs text-gray-600 mt-1 whitespace-pre-wrap">
+                      <div v-if="subError.stack" class="text-xs text-gray-600 mt-1 whitespace-pre-wrap overflow-hidden">
                         {{ subError.stack }}
                       </div>
                     </div>
                   </div>
                   
                   <!-- スタックトレース -->
-                  <div v-if="error.originalError.stack && !isAggregateError(error.originalError)" class="mt-2 text-xs text-gray-600 whitespace-pre-wrap">
-                    {{ error.originalError.stack }}
+                  <div v-if="getErrorInfo(error.originalError).stack && !isAggregateError(error.originalError)" class="mt-2 text-xs text-gray-600 whitespace-pre-wrap overflow-hidden">
+                    {{ getErrorInfo(error.originalError).stack }}
                   </div>
                 </div>
               </div>
