@@ -143,12 +143,12 @@ watch(step2Status, (currentStatus, previousStatus) => {
           createValidationError(
             'baseMesh/activeFeature',
             { baseMesh: baseMesh.value, activeFeature: activeFeature.value },
-            '必要なデータが不足しています'
+            '必要なデータが不足しています',
           ),
           {
             showUserNotification: true,
             logToConsole: import.meta.env.MODE !== 'production',
-          }
+          },
         )
         return
       }
@@ -187,7 +187,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
               {
                 showUserNotification: false,
                 logToConsole: import.meta.env.MODE !== 'production',
-              }
+              },
             )
             return null
           }
@@ -303,7 +303,7 @@ async function mapClickHandler(e: MapMouseEvent) {
   if (isInEdit.value) return
   isInEdit.value = true
   await onClickField(e).catch((error) => {
-    store.alertMessage.message = error
+    store.setMessage('Error', error)
   })
   step1Status.value = 'complete'
   activeFeatureId.value = activeFeature.value?.properties.id ?? ''

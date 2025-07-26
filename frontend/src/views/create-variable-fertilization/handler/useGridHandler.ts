@@ -156,41 +156,41 @@ export function useGridHandler(map: MaplibreRef) {
 
       const cogUrl = import.meta.env.VITE_OM_MAP_URL
       // COGファイルより腐植値を取得
-      const cogSource = await extractCogSource(cogUrl, bbox3857)
+      // const cogSource = await extractCogSource(cogUrl, bbox3857)
 
-      // 腐植値をラスター画像に変換
-      humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
+      // // 腐植値をラスター画像に変換
+      // humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
 
-      // ラスター画像として地図に追加
-      addHumusRaster(currentMap, humusRaster.value, bbox4326)
+      // // ラスター画像として地図に追加
+      // addHumusRaster(currentMap, humusRaster.value, bbox4326)
 
-      // ポイントデータも保持（グリッド計算用）
-      const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
+      // // ポイントデータも保持（グリッド計算用）
+      // const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
 
-      if (!activeFeatureBufferComputed.value) {
-        store.alertMessage.alertType = 'Error'
-        store.alertMessage.message = 'ポリゴン処理に失敗しました'
-        return
-      }
+      // if (!activeFeatureBufferComputed.value) {
+      //   store.alertMessage.alertType = 'Error'
+      //   store.alertMessage.message = 'ポリゴン処理に失敗しました'
+      //   return
+      // }
 
-      // 拡張ポリゴン内のポイントを抽出
-      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
+      // // 拡張ポリゴン内のポイントを抽出
+      // const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
 
-      // Point のみ抽出（MultiPointを除去）
-      const filteredPoints = rawPoints.features.filter(
-        (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
-      )
+      // // Point のみ抽出（MultiPointを除去）
+      // const filteredPoints = rawPoints.features.filter(
+      //   (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
+      // )
 
-      // refに代入（VFM計算用に保持）
-      humusPoint.value = {
-        type: 'FeatureCollection',
-        features: filteredPoints,
-      }
+      // // refに代入（VFM計算用に保持）
+      // humusPoint.value = {
+      //   type: 'FeatureCollection',
+      //   features: filteredPoints,
+      // }
 
-      if (configPersistStore.humusSymbolIsVisible) {
-        // 腐植値のシンボル表示
-        addHumusGrid(currentMap, humusPoint.value)
-      }
+      // if (configPersistStore.humusSymbolIsVisible) {
+      //   // 腐植値のシンボル表示
+      //   addHumusGrid(currentMap, humusPoint.value)
+      // }
 
       // クリックしたポリゴンのbboxの重心を算出（回転中心点）
       const centroid = turfCentroid(turfBboxPolygon(bbox4326))
