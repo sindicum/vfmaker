@@ -34,6 +34,12 @@ const router = createRouter({
       component: AboutView,
     },
     {
+      path: '/error-log',
+      name: 'ErrorLog',
+      component: () => import('@/views/error/ErrorLog.vue'),
+      meta: { title: 'エラーログ' }
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: () => {
         return '/'

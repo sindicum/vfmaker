@@ -5,6 +5,8 @@ import { useStore } from '@/stores/store'
 
 import { fromUrl } from 'geotiff'
 import { getSharedPool, resetPool } from '@/utils/geotiffPool'
+import { useErrorStore } from '@/stores/errorStore'
+import { ErrorCategory, ErrorSeverity } from '@/errors/types'
 import proj4 from 'proj4'
 import {
   area as turfArea,
@@ -347,6 +349,8 @@ export function useGridHandler(map: MaplibreRef) {
     url: string,
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
+    const errorStore = useErrorStore()
+    
     try {
       const tiff = await fromUrl(url)
       const pool = getSharedPool()
@@ -358,6 +362,35 @@ export function useGridHandler(map: MaplibreRef) {
       }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
       return cogSource
     } catch (error) {
+      // エラーの詳細情報を収集
+      const errorDetails = {
+        userAgent: navigator.userAgent,
+        isIOSChrome: /CriOS/.test(navigator.userAgent),
+        cogUrl: url,
+        bbox: bbox3857,
+        errorType: (error as Error).constructor.name,
+        errorMessage: (error as Error).message,
+        aggregateErrors: error instanceof AggregateError ? 
+          error.errors.map(e => ({
+            type: e.constructor.name,
+            message: e.message,
+            stack: e.stack
+          })) : undefined,
+        timestamp: new Date().toISOString()
+      }
+      
+      // errorStoreに詳細付きで保存
+      errorStore.addError({
+        id: crypto.randomUUID(),
+        category: ErrorCategory.GEOSPATIAL,
+        severity: ErrorSeverity.HIGH,
+        message: `COG処理エラー: ${(error as Error).message}`,
+        userMessage: '地図データの処理中にエラーが発生しました',
+        timestamp: new Date(),
+        context: errorDetails,
+        originalError: error as Error
+      })
+      
       // iOS ChromeでPoolエラーが発生した場合、Poolなしで再試行
       console.warn('GeoTIFF Pool error, retrying without pool:', error)
       resetPool() // Poolをリセット
