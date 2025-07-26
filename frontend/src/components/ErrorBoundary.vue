@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
-import { useErrorHandler } from '@/composables/useErrorHandler'
-import { ErrorCategory, ErrorSeverity } from '@/types/error'
-import type { AppError } from '@/types/error'
+import { useErrorHandler, ErrorCategory, ErrorSeverity } from '@/errors'
+import type { AppError } from '@/errors'
 
 const hasError = ref(false)
 const { handleError } = useErrorHandler()
@@ -42,11 +41,11 @@ onErrorCaptured((error, instance, info) => {
 <template>
   <div>
     <slot v-if="!hasError" />
-    <div v-else class="error-boundary">
-      <div class="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
+    <div v-else class="w-screen h-screen flex items-center justify-center">
+      <div class="text-center pb-18">
         <div class="mb-4">
           <svg
-            class="w-16 h-16 text-red-500 mx-auto"
+            class="w-16 h-16 text-rose-600 mx-auto"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -63,7 +62,7 @@ onErrorCaptured((error, instance, info) => {
         <p class="text-gray-600 mb-4">申し訳ございません。予期しないエラーが発生しました。</p>
         <button
           @click="retry"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
         >
           再試行
         </button>

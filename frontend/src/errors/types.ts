@@ -23,3 +23,15 @@ export interface AppError {
   context?: Record<string, unknown>
   originalError?: Error
 }
+
+// エラーハンドリングオプション
+export interface ErrorHandlerOptions {
+  showUserNotification?: boolean
+  logToConsole?: boolean
+  logToStore?: boolean
+  retry?: {
+    enabled: boolean
+    maxAttempts?: number
+    delay?: number
+  }
+}

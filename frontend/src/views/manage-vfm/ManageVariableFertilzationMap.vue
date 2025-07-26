@@ -70,6 +70,8 @@ const checkCurrentPositionInGrid = () => {
   // パフォーマンス最適化: バッファ計算を事前に行い、早期終了を実装
   for (const feature of persistStore.featurecollection.features) {
     const extendedFeature = turfBuffer(feature as Feature<Polygon>, 0.03, { units: 'kilometers' })
+    if (!extendedFeature || !feature.properties) continue
+
     const isInside = turfBooleanPointInPolygon(currentPoint, extendedFeature)
     if (isInside) {
       currentFeatureId = feature.properties.id
@@ -95,7 +97,7 @@ const checkCurrentPositionInGrid = () => {
   // パフォーマンス最適化: ポリゴンのみを対象とし、早期終了を実装
   for (const feature of vfm.featureCollection.features) {
     // ポリゴン以外はスキップ
-    if (feature.geometry.type !== 'Polygon') {
+    if (feature.geometry.type !== 'Polygon' || !feature.properties) {
       continue
     }
 
@@ -108,7 +110,7 @@ const checkCurrentPositionInGrid = () => {
       return
     }
   }
-  
+
   // グリッド内に見つからない場合はnullを設定
   currentGridInfo.value = null
 }
@@ -122,7 +124,7 @@ const resetCurrentGridInfo = () => {
 const handleMapLoad = () => {
   const mapInstance = map?.value
   if (!mapInstance) return
-  
+
   addSource(mapInstance, persistStore.featurecollection)
   addLayer(mapInstance)
 
@@ -150,11 +152,10 @@ onUnmounted(() => {
 watch(
   () => store.currentGeolocation,
   () => {
-    store.setMessage(
-      'Info',
-      `緯度${store.currentGeolocation.lat} ,経度${store.currentGeolocation.lng}`,
-    )
-
+    // store.setMessage(
+    //   'Info',
+    //   `緯度${store.currentGeolocation.lat} ,経度${store.currentGeolocation.lng}`,
+    // )
     resetCurrentGridInfo()
     checkCurrentPositionInGrid()
   },
@@ -178,13 +179,12 @@ const removeVfm = (id: string) => {
   try {
     removeVraMap(mapInstance, id)
     persistStore.removeVariableFertilizationMap(id)
-    
+
     store.alertMessage.alertType = 'Info'
     store.alertMessage.message = '施肥マップを削除しました'
   } catch (error) {
     store.alertMessage.alertType = 'Error'
     store.alertMessage.message = '施肥マップの削除に失敗しました'
-    console.error('Remove VFM error:', error)
   }
 }
 
@@ -193,7 +193,7 @@ const exportVfm = async (vfm: FeatureCollection) => {
   const url = import.meta.env.VITE_API_URL
   const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
   store.isLoading = true
-  
+
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -203,7 +203,7 @@ const exportVfm = async (vfm: FeatureCollection) => {
       },
       body: JSON.stringify(vfm),
     })
-    
+
     if (!res.ok) {
       store.alertMessage.alertType = 'Error'
       store.alertMessage.message = 'HTTPエラー' + res.status
@@ -224,7 +224,6 @@ const exportVfm = async (vfm: FeatureCollection) => {
   } catch (error) {
     store.alertMessage.alertType = 'Error'
     store.alertMessage.message = 'ネットワークエラーが発生しました'
-    console.error('Export VFM error:', error)
   } finally {
     store.isLoading = false
   }
@@ -261,7 +260,6 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
       duration: 1000, // アニメーション時間（ミリ秒）
     })
   } catch (error) {
-    console.error('Error fitting to VFM bounds:', error)
     store.alertMessage.alertType = 'Error'
     store.alertMessage.message = 'マップの表示範囲の調整に失敗しました'
   }
@@ -284,7 +282,7 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
       </div>
 
       <!-- タブメニュー -->
-      <div class="mb-6">
+      <div :class="[isDesktop ? 'mb-4' : 'mb-2']">
         <div class="border-b border-gray-200 flex col-span-4">
           <button
             :class="[
@@ -355,12 +353,12 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
 
       <!-- マップ出力・管理タブのコンテンツ -->
       <div v-show="activeTab === 'management'">
-        <div class="my-4 max-h-[calc(100vh-20rem)] overflow-y-auto">
+        <div class="">
           <!-- 合計値の表示 -->
           <div
             :class="[
-              isDesktop ? 'flex-col' : 'flex-row items-center',
-              'flex mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200',
+              isDesktop ? 'flex-col mb-4 p-4' : 'flex-row items-center p-2 mb-1',
+              'flex  bg-amber-50 rounded-lg border border-amber-200',
             ]"
           >
             <h3
@@ -392,7 +390,10 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
           <!-- データがある場合のテーブル表示 -->
           <div
             v-if="persistStore.variableFertilizationMaps.length > 0"
-            class="bg-white rounded-lg border border-gray-200 overflow-hidden"
+            :class="[
+              isDesktop ? 'max-h-[calc(100vh-30rem)]' : 'max-h-40 sm:max-h-64',
+              'bg-white rounded-lg border border-gray-200  overflow-y-auto',
+            ]"
           >
             <table class="w-full">
               <thead class="bg-gray-50">
@@ -515,7 +516,7 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-gray-300 flex justify-center">
+        <div v-show="isDesktop" class="mt-4 pt-4 border-t border-gray-300 flex justify-center">
           <button
             class="flex items-center px-2 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 h-8"
             @click="clearVfm"

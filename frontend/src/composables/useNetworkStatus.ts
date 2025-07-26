@@ -1,33 +1,35 @@
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useErrorHandler } from './useErrorHandler'
-import { ErrorCategory, ErrorSeverity } from '@/types/error'
-import type { AppError } from '@/types/error'
+import { useErrorHandler, createNetworkError, ErrorSeverity } from '@/errors'
 
 export function useNetworkStatus() {
   const isOnline = ref(navigator.onLine)
   const { handleError } = useErrorHandler()
 
-  const createNetworkError = (status: 'offline' | 'online'): AppError => ({
-    id: `network_${status}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    category: ErrorCategory.NETWORK,
-    severity: status === 'offline' ? ErrorSeverity.HIGH : ErrorSeverity.LOW,
-    message: `ネットワーク状態変更: ${status}`,
-    userMessage:
-      status === 'offline'
-        ? 'インターネット接続が切断されました。地図データの読み込みができません。'
-        : 'インターネット接続が復旧しました。',
-    timestamp: new Date(),
-    context: { networkStatus: status, userAgent: navigator.userAgent },
-  })
-
   const handleOnline = () => {
     isOnline.value = true
-    handleError(createNetworkError('online'))
+    const error = createNetworkError('network_online', new Error('ネットワーク状態変更: online'), {
+      networkStatus: 'online',
+      userAgent: navigator.userAgent,
+    })
+    handleError({
+      ...error,
+      severity: ErrorSeverity.LOW,
+      userMessage: 'インターネット接続が復旧しました。',
+    })
   }
 
   const handleOffline = () => {
     isOnline.value = false
-    handleError(createNetworkError('offline'))
+    const error = createNetworkError(
+      'network_offline',
+      new Error('ネットワーク状態変更: offline'),
+      { networkStatus: 'offline', userAgent: navigator.userAgent },
+    )
+    handleError({
+      ...error,
+      severity: ErrorSeverity.HIGH,
+      userMessage: 'インターネット接続が切断されました。地図データの読み込みができません。',
+    })
   }
 
   onMounted(() => {

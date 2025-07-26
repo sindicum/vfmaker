@@ -10,8 +10,7 @@ import geojsonRbush from '@turf/geojson-rbush'
 import { addVraMap } from './LayerHandler'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
-import { useErrorHandler } from '@/composables/useErrorHandler'
-import { createGeospatialError } from '@/utils/errorFactories'
+import { useErrorHandler, createGeospatialError } from '@/errors'
 
 import type { FeatureCollection, Feature, Polygon, Point } from 'geojson'
 import type { MaplibreRef } from '@/types/maplibre'

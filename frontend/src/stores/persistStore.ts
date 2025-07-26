@@ -27,7 +27,8 @@ export const usePersistStore = defineStore(
 
     const addFeature = (feature: Feature<Polygon>) => {
       if (feature.id === undefined) {
-        console.warn('feature.id が undefined です')
+        store.alertMessage.alertType = 'Error'
+        store.alertMessage.message = 'ポリゴンIDが設定されていません'
         return
       }
       const id = String(feature.id)

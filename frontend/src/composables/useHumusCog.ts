@@ -1,6 +1,7 @@
 import { addProtocol } from 'maplibre-gl'
 import { encode } from 'fast-png'
 import { Pool, fromUrl } from 'geotiff'
+import { useErrorHandler, createGeospatialError } from '@/errors'
 
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap, RasterSourceSpecification } from '@/types/maplibre'
@@ -9,6 +10,7 @@ import type { GeoTIFF } from 'geotiff'
 let isProtocolAdded = false
 
 export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
+  const { handleError } = useErrorHandler()
   // RGB Color
   const red: [number, number, number] = [215, 25, 28]
   const orange: [number, number, number] = [253, 174, 97]
@@ -77,7 +79,10 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
       return source
     } catch (error) {
-      console.error('Failed to process COG URL:', error)
+      handleError(createGeospatialError('COG URL処理', error as Error, { url }), {
+        showUserNotification: false,
+        logToConsole: import.meta.env.MODE !== 'production',
+      })
       return null
     }
   }
@@ -125,7 +130,22 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
         return { data: png }
       } catch (error) {
-        console.error('Failed to addProtocol:', error)
+        // タイル読み込みエラーは頻発する可能性があるため、開発環境でのみログ出力
+        if (import.meta.env.MODE !== 'production') {
+          handleError(
+            createGeospatialError('COGタイル読み込み', error as Error, {
+              url: params.url,
+              z,
+              x,
+              y,
+            }),
+            {
+              showUserNotification: false,
+              logToConsole: true,
+              logToStore: false, // 頻発するためストアには記録しない
+            },
+          )
+        }
         return { data: new Uint8Array(4 * tileSize * tileSize) }
       }
     })
@@ -142,7 +162,15 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
       const source = await generateCogSource(cogUrl)
 
       if (!source) {
-        console.error('Failed to generate COG source')
+        handleError(
+          createGeospatialError('COGソース生成', new Error('COGソースの生成に失敗しました'), {
+            cogUrl,
+          }),
+          {
+            showUserNotification: true,
+            logToConsole: import.meta.env.MODE !== 'production',
+          },
+        )
         return
       }
 
@@ -162,7 +190,16 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
         })
       }
     } catch (error) {
-      console.error('Failed to initialize COG layer:', error)
+      handleError(
+        createGeospatialError('COGレイヤー初期化', error as Error, {
+          cogUrl,
+          hasMap: !!map?.value,
+        }),
+        {
+          showUserNotification: true,
+          logToConsole: import.meta.env.MODE !== 'production',
+        },
+      )
     }
   }
 

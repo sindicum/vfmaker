@@ -1,9 +1,17 @@
-import type { Map, MapMouseEvent, GeoJSONSource, RasterSourceSpecification } from 'maplibre-gl'
+import type {
+  Map,
+  MapMouseEvent as BaseMapMouseEvent,
+  GeoJSONSource,
+  RasterSourceSpecification,
+} from 'maplibre-gl'
 import type { TerraDraw } from 'terra-draw'
 import type { ShallowRef } from 'vue'
+import type { Feature } from 'geojson'
 
 export type MaplibreMap = Map | null
-export type MapMouseEvent = MapMouseEvent
+export type MapMouseEvent = BaseMapMouseEvent & {
+  features?: Feature[]
+}
 export type GeoJSONSource = GeoJSONSource
 
 export type RasterSourceSpecification = RasterSourceSpecification

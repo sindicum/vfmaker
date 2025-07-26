@@ -5,7 +5,6 @@ import { usePersistStore } from '@/stores/persistStore'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import MapBase from '@/components/map/MapBase.vue'
-import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
 import selectField from './SidebarSelectField.vue'
 import setGridPosition from './SidebarSetGridPosition.vue'
 import exportVfm from './SidebarExportVfm.vue'
@@ -25,6 +24,7 @@ import {
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useErrorHandler, createValidationError, createGeospatialError } from '@/errors'
 
 import {
   intersect as turfIntersect,
@@ -138,7 +138,18 @@ watch(step2Status, (currentStatus, previousStatus) => {
   if (previousStatus === 'current' && currentStatus == 'complete') {
     if (configPersistStore.outsideMeshClip) {
       if (!baseMesh.value?.features || !activeFeature.value) {
-        console.warn('必要なデータが不足しています')
+        const { handleError } = useErrorHandler()
+        handleError(
+          createValidationError(
+            'baseMesh/activeFeature',
+            { baseMesh: baseMesh.value, activeFeature: activeFeature.value },
+            '必要なデータが不足しています'
+          ),
+          {
+            showUserNotification: true,
+            logToConsole: import.meta.env.MODE !== 'production',
+          }
+        )
         return
       }
 
@@ -167,7 +178,17 @@ watch(step2Status, (currentStatus, previousStatus) => {
 
             return result
           } catch (error) {
-            console.warn('交差計算エラー:', error)
+            const { handleError } = useErrorHandler()
+            handleError(
+              createGeospatialError('ポリゴン交差計算', error as Error, {
+                meshFeatureIndex: baseMesh.value.features.indexOf(meshFeature),
+                activeFeatureId: activeFeature.value?.properties?.id,
+              }),
+              {
+                showUserNotification: false,
+                logToConsole: import.meta.env.MODE !== 'production',
+              }
+            )
             return null
           }
         })
@@ -365,10 +386,44 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
     </div>
 
     <MapBase />
-    <HumusMapLegend
-      v-show="step3Status !== 'current'"
-      class="absolute top-1/2 -translate-y-1/2 right-3"
-    />
+    <div
+      v-show="step2Status === 'current'"
+      :class="[
+        isDesktop ? 'bottom-10' : 'bottom-17',
+        'absolute px-3  bg-white/90 z-10 flex right-2 py-1 rounded-2xl flex-row gap-x-3',
+      ]"
+    >
+      <label class="flex items-center space-x-2">
+        <span class="text-sm">腐植値</span>
+      </label>
+
+      <!-- 帯状グラデーション凡例 -->
+      <div class="text-xs flex items-center justify-center">
+        <!-- グラデーション帯 -->
+        <div class="mr-1">0</div>
+        <div class="relative w-16 h-4 border border-gray-300">
+          <div
+            class="absolute inset-0"
+            style="
+              background: linear-gradient(
+                to right,
+                #d7191c 0%,
+                #f07c4a 16.67%,
+                #fec980 33.33%,
+                #ffffbf 50%,
+                #c7e8ad 66.67%,
+                #80bfab 83.33%,
+                #2b83ba 100%
+              );
+            "
+          ></div>
+        </div>
+        <div class="ml-1">
+          <span>150</span>
+          <span class="ml-1">mg/kg</span>
+        </div>
+      </div>
+    </div>
     <VfmConfigComp v-model:is-open-config="isOpenConfig" />
   </main>
 </template>

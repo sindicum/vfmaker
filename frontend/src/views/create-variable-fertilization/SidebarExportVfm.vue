@@ -7,17 +7,19 @@ import { usePersistStore } from '@/stores/persistStore'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 
 import type { dialogType } from '@/types/maplibre'
+import type { Feature, Polygon, GeoJsonProperties } from 'geojson'
 
 const currentDialogName = ref<dialogType>('')
 const persistStore = usePersistStore()
 
 const area = defineModel<number>('area')
-const step3Status = defineModel('step3Status')
-const baseFertilizationAmount = defineModel('baseFertilizationAmount')
-const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
-const applicationGridFeatures = defineModel('applicationGridFeatures')
+const step3Status = defineModel<string>('step3Status')
+const baseFertilizationAmount = defineModel<number>('baseFertilizationAmount')
+const variableFertilizationRangeRate = defineModel<number>('variableFertilizationRangeRate')
+const applicationGridFeatures =
+  defineModel<Feature<Polygon, GeoJsonProperties>[]>('applicationGridFeatures')
 const totalAmount = defineModel<number>('totalAmount')
-const activeFeatureId = defineModel('activeFeatureId')
+const activeFeatureId = defineModel<string>('activeFeatureId')
 
 const { isDesktop } = useControlScreenWidth()
 
@@ -54,8 +56,8 @@ watch([isOverwriteSave], () => {
 // 保存処理を実行
 const executeSave = () => {
   persistStore.addViewVariableFertilizationMap(
-    applicationGridFeatures.value,
-    activeFeatureId.value,
+    applicationGridFeatures.value ?? [],
+    activeFeatureId.value ?? '',
     Math.round(totalAmount.value ?? 0),
     Math.round(area.value ?? 0) / 100,
   )
