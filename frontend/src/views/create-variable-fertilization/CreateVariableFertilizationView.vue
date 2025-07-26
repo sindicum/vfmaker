@@ -18,7 +18,6 @@ import {
   removeHumusGrid,
   addBaseMesh,
   removeBaseMesh,
-  addVraMap,
   removeVraMap,
   addHumusRaster,
   removeHumusRaster,
@@ -59,6 +58,8 @@ const isOpenConfig = ref(false)
 
 // グリッド編集状態
 const isInEdit = ref(false)
+
+const activeFeatureId = ref<string>('')
 
 const {
   activeFeature,
@@ -111,6 +112,7 @@ onBeforeUnmount(() => {
   step1Status.value = 'current'
   step2Status.value = 'upcoming'
   step3Status.value = 'upcoming'
+  activeFeatureId.value = ''
 })
 
 watch(step1Status, (currentStatus, previousStatus) => {
@@ -122,6 +124,7 @@ watch(step1Status, (currentStatus, previousStatus) => {
     // バッファーの初期化（グリッド幅はユーザー設定を生かす）
     buffer.value = 0
     isInEdit.value = false
+    activeFeatureId.value = ''
   }
 })
 
@@ -252,6 +255,7 @@ watch(
         step3Status.value = 'upcoming'
         step2Status.value = 'upcoming'
         step1Status.value = 'current'
+        activeFeatureId.value = ''
       })
     }
   },
@@ -281,6 +285,7 @@ async function mapClickHandler(e: MapMouseEvent) {
     store.alertMessage.message = error
   })
   step1Status.value = 'complete'
+  activeFeatureId.value = activeFeature.value?.properties.id ?? ''
 }
 
 /**
@@ -322,7 +327,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
         </button>
       </div>
 
-      <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'font-semibold']">
+      <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'text-xl font-bold']">
         <span>可変施肥マップの作成</span>
       </div>
       <ol
@@ -353,6 +358,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:application-grid-features="applicationGridFeatures"
             v-model:total-amount="totalAmount"
             v-model:area="totalArea"
+            v-model:active-feature-id="activeFeatureId"
           />
         </li>
       </ol>

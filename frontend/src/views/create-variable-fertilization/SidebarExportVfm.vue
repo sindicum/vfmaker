@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
-import { useStore } from '@/stores/store'
+import VfmSaveDialog from './components/VfmSaveDialog.vue'
+import { usePersistStore } from '@/stores/persistStore'
 import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
 
 import type { dialogType } from '@/types/maplibre'
 
 const currentDialogName = ref<dialogType>('')
-const store = useStore()
+const persistStore = usePersistStore()
 
 const area = defineModel<number>('area')
 const step3Status = defineModel('step3Status')
@@ -16,8 +17,12 @@ const baseFertilizationAmount = defineModel('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
 const applicationGridFeatures = defineModel('applicationGridFeatures')
 const totalAmount = defineModel<number>('totalAmount')
+const activeFeatureId = defineModel('activeFeatureId')
 
 const { isDesktop } = useControlScreenWidth()
+
+const isOpenVfmSaveDialog = ref(false)
+const isOverwriteSave = ref(false)
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
@@ -29,51 +34,50 @@ const onClickDialog = (dialogName: dialogType) => {
   currentDialogName.value = dialogName
 }
 
-// Stepの終了（可変施肥マップを出力しStep1に戻る）
-const endStep = () => {
-  exportVfm()
-  step3Status.value = 'complete'
-}
-
 // Step2に戻る
 const returnStep2 = () => {
   step3Status.value = 'upcoming'
 }
 
-// 可変施肥マップの出力
-async function exportVfm() {
-  const url = import.meta.env.VITE_API_URL
-  const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
-  store.isLoading = true
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      type: 'FeatureCollection',
-      features: applicationGridFeatures.value,
-    }),
-  })
-  if (!res.ok) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = 'HTTPエラー' + res.status
-  } else {
-    const json = await res.json()
-    const downloadUrl = json.download_url
-
-    // 自動でダウンロードを実行
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = '' // ファイル名を指定しない場合、元のファイル名が使われる
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = '可変施肥マップを出力しました'
+// VfmSaveDialogの状態変化を監視し、上書き保存の場合は保存処理を実行
+watch([isOverwriteSave], () => {
+  if (isOverwriteSave.value) {
+    // 同一IDのマップを削除
+    persistStore.variableFertilizationMaps = persistStore.variableFertilizationMaps.filter(
+      (v) => v.id !== activeFeatureId.value,
+    )
+    executeSave()
+    isOverwriteSave.value = false
   }
-  store.isLoading = false
+})
+
+// 保存処理を実行
+const executeSave = () => {
+  persistStore.addViewVariableFertilizationMap(
+    applicationGridFeatures.value,
+    activeFeatureId.value,
+    Math.round(totalAmount.value ?? 0),
+    Math.round(area.value ?? 0) / 100,
+  )
+
+  // Step1に戻る
+  step3Status.value = 'complete'
+}
+
+// 可変施肥マップの保存
+const saveVfm = () => {
+  // 同一IDが存在するかチェック
+  const existingVfm = persistStore.variableFertilizationMaps.find(
+    (v) => v.id === activeFeatureId.value,
+  )
+
+  // 同一IDのマップが存在する場合はダイアログを表示
+  if (existingVfm) {
+    isOpenVfmSaveDialog.value = true
+    return
+  }
+  // 同一IDのマップがない場合は保存処理を実行
+  executeSave()
 }
 </script>
 
@@ -152,9 +156,9 @@ async function exportVfm() {
         </button>
         <button
           class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
-          @click="endStep"
+          @click="saveVfm"
         >
-          <span>ファイル出力</span>
+          <span>保存</span>
         </button>
       </div>
     </div>
@@ -164,5 +168,9 @@ async function exportVfm() {
     v-model:dialog-name="currentDialogName"
     v-model:base-fertilization-amount="baseFertilizationAmount"
     v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
+  />
+  <VfmSaveDialog
+    v-model:is-open-vfm-save-dialog="isOpenVfmSaveDialog"
+    v-model:is-overwrite-save="isOverwriteSave"
   />
 </template>

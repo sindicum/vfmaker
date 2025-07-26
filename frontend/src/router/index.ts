@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/home/HomeView.vue'
 import ManageFieldInfo from '../views/manage-fieldinfo/ManageFieldinfoView.vue'
 import CreateVariableFertilizationMap from '@/views/create-variable-fertilization/CreateVariableFertilizationView.vue'
+import ManageVariableFertilizationMap from '@/views/manage-vfm/ManageVariableFertilzationMap.vue'
 import AboutView from '@/views/about/AboutView.vue'
 
 const router = createRouter({
@@ -21,6 +22,11 @@ const router = createRouter({
       path: '/create-vfm',
       name: 'CreateVfm',
       component: CreateVariableFertilizationMap,
+    },
+    {
+      path: '/manage-vfm',
+      name: 'ManageVfm',
+      component: ManageVariableFertilizationMap,
     },
     {
       path: '/about',

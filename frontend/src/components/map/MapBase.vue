@@ -129,8 +129,37 @@ onMounted(() => {
       // e.coords には GeolocationPosition.coords が入っている
       const latitude = e.coords.latitude
       const longitude = e.coords.longitude
+      // storeに緯度経度を保存
+      store.currentGeolocation = { lat: latitude, lng: longitude }
+    })
 
-      store.setMessage('Info', `緯度${latitude},経度${longitude}`)
+    geolocateControl.on('trackuserlocationend', () => {
+      // 追跡が終了した場合に緯度経度をリセット
+      store.currentGeolocation = { lat: null, lng: null }
+    })
+
+    geolocateControl.on('error', (error) => {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          store.setMessage(
+            'Error',
+            '位置情報の利用が拒否されました。ブラウザの設定をご確認ください。',
+          )
+          break
+        case error.POSITION_UNAVAILABLE:
+          store.setMessage('Error', '現在位置が取得できませんでした。')
+          break
+        case error.TIMEOUT:
+          store.setMessage('Error', '位置情報の取得がタイムアウトしました。')
+          break
+        default:
+          store.setMessage('Error', '位置情報の取得中に予期しないエラーが発生しました。')
+      }
+
+      // オプション: 開発中のみログ出力
+      if (import.meta.env.MODE !== 'production') {
+        console.error('Geolocation failed:', error, import.meta.env.MODE)
+      }
     })
 
     store.mapLoaded = true

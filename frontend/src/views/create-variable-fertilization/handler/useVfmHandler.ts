@@ -68,6 +68,7 @@ export function useVfmHandler(map: MaplibreRef) {
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
+
     timeoutId = window.setTimeout(() => {
       const vrf = updateVrf(
         applicationGridFeatures.value,
@@ -76,7 +77,7 @@ export function useVfmHandler(map: MaplibreRef) {
         configPersistStore.fiveStepsFertilization,
       )
 
-      const sourceData = map?.value?.getSource('vra-map') as GeoJSONSource
+      const sourceData = map?.value?.getSource('vra-map-default') as GeoJSONSource
       applicationGridFeatureCollection.value.features = vrf
       if (!sourceData) return
       sourceData.setData(applicationGridFeatureCollection.value)
@@ -143,11 +144,7 @@ export function useVfmHandler(map: MaplibreRef) {
       applicationGridFeatures.value = sortedFeatures
       // VraMapを表示
       if (!map?.value) return
-      addVraMap(
-        map.value,
-        { type: 'FeatureCollection', features: applicationGridFeatures.value },
-        applicationStep.value,
-      )
+      addVraMap(map.value, { type: 'FeatureCollection', features: applicationGridFeatures.value })
     } catch (error) {
       handleError(
         createGeospatialError('createVfm', error as Error, {
@@ -297,7 +294,6 @@ export function useVfmHandler(map: MaplibreRef) {
 
         if (nearestPoint) {
           mean = nearestPoint.properties.humus
-          // interpolatedMeshCount++
         }
       }
 
@@ -473,6 +469,7 @@ export function useVfmHandler(map: MaplibreRef) {
     baseFertilizationAmount,
     variableFertilizationRangeRate,
     applicationGridFeatures,
+    applicationStep,
     totalArea,
     totalAmount,
     createVfm,

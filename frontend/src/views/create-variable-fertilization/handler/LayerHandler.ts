@@ -107,8 +107,6 @@ export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
 export function removeHumusGrid(map: MaplibreMap) {
   // ポイントレイヤーの削除
   if (map && map.getLayer('humusGrid-label')) {
-    // if (map && map.getLayer('humusGrid')) {
-    // map.removeLayer('humusGrid')
     map.removeLayer('humusGrid-label')
     map.removeSource('humusGrid')
   }
@@ -183,18 +181,20 @@ export function removeBaseMesh(map: MaplibreMap) {
 export function addVraMap(
   map: MaplibreMap,
   humusMeanFeatureCollection: FeatureCollection,
-  applicationStep: [number, number, number, number, number],
+  id: string = 'default',
 ) {
+  const applicationStep = [0.2, 0.1, 0, -0.1, -0.2]
   removeVraMap(map)
 
-  map?.addSource('vra-map', {
+  map?.addSource('vra-map-' + id, {
     type: 'geojson',
     data: humusMeanFeatureCollection,
   })
+
   map?.addLayer({
-    id: 'vra-map',
+    id: 'vra-map-' + id,
     type: 'fill',
-    source: 'vra-map',
+    source: 'vra-map-' + id,
     paint: {
       'fill-color': [
         // interpolateを指定
@@ -225,8 +225,8 @@ export function addVraMap(
     },
   })
   map?.addLayer({
-    id: 'vra-map-symbol',
-    source: 'vra-map',
+    id: 'vra-map-symbol-' + id,
+    source: 'vra-map-' + id,
     type: 'symbol',
     layout: {
       'text-field': ['get', 'amount_fertilization_unit'],
@@ -234,10 +234,10 @@ export function addVraMap(
   })
 }
 
-export function removeVraMap(map: MaplibreMap) {
-  if (map?.getLayer('vra-map')) {
-    map.removeLayer('vra-map')
-    map.removeLayer('vra-map-symbol')
-    map.removeSource('vra-map')
+export function removeVraMap(map: MaplibreMap, id: string = 'default') {
+  if (map?.getLayer('vra-map-' + id)) {
+    map.removeLayer('vra-map-' + id)
+    map.removeLayer('vra-map-symbol-' + id)
+    map.removeSource('vra-map-' + id)
   }
 }
