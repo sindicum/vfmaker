@@ -51,9 +51,13 @@ watch(
 
     mapInstance.once('idle', async () => {
       if (isCogLayerVisible.value) {
-        await addCog()
-        addSource(mapInstance, persistStore.featurecollection)
-        addLayer(mapInstance)
+        try {
+          await addCog()
+          addSource(mapInstance, persistStore.featurecollection)
+          addLayer(mapInstance)
+        } catch (error) {
+          store.setMessage('Error', String(error))
+        }
       }
     })
   },
