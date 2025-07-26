@@ -5,8 +5,8 @@ import { useStore } from '@/stores/store'
 
 import { fromUrl } from 'geotiff'
 import { getSharedPool, resetPool } from '@/utils/geotiffPool'
-import { useErrorStore } from '@/stores/errorStore'
-import { ErrorCategory, ErrorSeverity } from '@/errors/types'
+import { useErrorHandler } from '@/errors'
+import { createGeospatialError } from '@/errors'
 import proj4 from 'proj4'
 import {
   area as turfArea,
@@ -349,7 +349,7 @@ export function useGridHandler(map: MaplibreRef) {
     url: string,
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
-    const errorStore = useErrorStore()
+    const { handleError } = useErrorHandler()
     
     try {
       const tiff = await fromUrl(url)
@@ -379,30 +379,37 @@ export function useGridHandler(map: MaplibreRef) {
         timestamp: new Date().toISOString()
       }
       
-      // errorStoreに詳細付きで保存
-      errorStore.addError({
-        id: crypto.randomUUID(),
-        category: ErrorCategory.GEOSPATIAL,
-        severity: ErrorSeverity.HIGH,
-        message: `COG処理エラー: ${(error as Error).message}`,
-        userMessage: '地図データの処理中にエラーが発生しました',
-        timestamp: new Date(),
-        context: errorDetails,
-        originalError: error as Error
-      })
+      // エラーハンドラーを使用してユーザーに通知
+      const appError = createGeospatialError(
+        `COGデータ読み込み: ${(error as Error).message}`,
+        error as Error,
+        errorDetails
+      )
+      handleError(appError)
       
       // iOS ChromeでPoolエラーが発生した場合、Poolなしで再試行
       console.warn('GeoTIFF Pool error, retrying without pool:', error)
       resetPool() // Poolをリセット
       
-      const tiff = await fromUrl(url)
-      const cogSource = await tiff.readRasters({
-        bbox: bbox3857,
-        samples: [0],
-        interleave: true,
-        // poolを指定しない
-      })
-      return cogSource
+      try {
+        const tiff = await fromUrl(url)
+        const cogSource = await tiff.readRasters({
+          bbox: bbox3857,
+          samples: [0],
+          interleave: true,
+          // poolを指定しない
+        })
+        return cogSource
+      } catch (retryError) {
+        // リトライも失敗した場合
+        const retryAppError = createGeospatialError(
+          `COGデータ読み込み再試行失敗: ${(retryError as Error).message}`,
+          retryError as Error,
+          { ...errorDetails, retry: true }
+        )
+        handleError(retryAppError)
+        throw retryError // エラーを上位に伝播
+      }
     }
   }
 

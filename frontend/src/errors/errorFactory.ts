@@ -10,50 +10,32 @@ export const createNetworkError = (
   operation: string,
   originalError?: Error,
   context?: Record<string, unknown>,
-): AppError => {
-  // originalErrorをシリアライズ可能な形式に変換
-  const serializedError = originalError ? {
-    name: originalError.name || 'NetworkError',
-    message: originalError.message || 'Unknown network error',
-    stack: originalError.stack?.slice(0, 1000)
-  } : undefined
-
-  return {
-    id: generateErrorId(),
-    category: ErrorCategory.NETWORK,
-    severity: ErrorSeverity.HIGH,
-    message: `ネットワークエラー: ${operation}`,
-    userMessage: 'ネットワーク接続に問題が発生しました。接続を確認して再試行してください。',
-    timestamp: new Date(),
-    context: { operation, ...context },
-    originalError: serializedError as any,
-  }
-}
+): AppError => ({
+  id: generateErrorId(),
+  category: ErrorCategory.NETWORK,
+  severity: ErrorSeverity.HIGH,
+  message: `ネットワークエラー: ${operation}`,
+  userMessage: 'ネットワーク接続に問題が発生しました。接続を確認して再試行してください。',
+  timestamp: new Date(),
+  context: { operation, ...context },
+  originalError,
+})
 
 // 地理空間処理エラー
 export const createGeospatialError = (
   operation: string,
   originalError: Error,
   context?: Record<string, unknown>,
-): AppError => {
-  // originalErrorをシリアライズ可能な形式に変換
-  const serializedError = originalError ? {
-    name: originalError.name || 'GeospatialError',
-    message: originalError.message || 'Unknown geospatial error',
-    stack: originalError.stack?.slice(0, 1000)
-  } : undefined
-
-  return {
-    id: generateErrorId(),
-    category: ErrorCategory.GEOSPATIAL,
-    severity: ErrorSeverity.MEDIUM,
-    message: `空間データ処理エラー: ${operation}`,
-    userMessage: '地図データの処理中にエラーが発生しました。再試行してください。',
-    timestamp: new Date(),
-    context: { operation, ...context },
-    originalError: serializedError as any,
-  }
-}
+): AppError => ({
+  id: generateErrorId(),
+  category: ErrorCategory.GEOSPATIAL,
+  severity: ErrorSeverity.MEDIUM,
+  message: `空間データ処理エラー: ${operation}`,
+  userMessage: '地図データの処理中にエラーが発生しました。再試行してください。',
+  timestamp: new Date(),
+  context: { operation, ...context },
+  originalError,
+})
 
 // バリデーションエラー
 export const createValidationError = (
@@ -93,25 +75,16 @@ export const createGeneralError = (
   severity: ErrorSeverity = ErrorSeverity.MEDIUM,
   originalError?: Error,
   context?: Record<string, unknown>,
-): AppError => {
-  // originalErrorをシリアライズ可能な形式に変換
-  const serializedError = originalError ? {
-    name: originalError.name || 'Error',
-    message: originalError.message || 'Unknown error',
-    stack: originalError.stack?.slice(0, 1000)
-  } : undefined
-
-  return {
-    id: generateErrorId(),
-    category: ErrorCategory.UNKNOWN,
-    severity,
-    message,
-    userMessage,
-    timestamp: new Date(),
-    context,
-    originalError: serializedError as any,
-  }
-}
+): AppError => ({
+  id: generateErrorId(),
+  category: ErrorCategory.UNKNOWN,
+  severity,
+  message,
+  userMessage,
+  timestamp: new Date(),
+  context,
+  originalError,
+})
 
 // HTTPエラー（ステータスコードに基づく）
 export const createHttpError = (
@@ -140,13 +113,6 @@ export const createHttpError = (
     severity = ErrorSeverity.HIGH
   }
 
-  // originalErrorをシリアライズ可能な形式に変換
-  const serializedError = originalError ? {
-    name: originalError.name || 'HTTPError',
-    message: originalError.message || `HTTP ${status} error`,
-    stack: originalError.stack?.slice(0, 1000)
-  } : undefined
-
   return {
     id: generateErrorId(),
     category: ErrorCategory.NETWORK,
@@ -155,6 +121,6 @@ export const createHttpError = (
     userMessage,
     timestamp: new Date(),
     context: { status, url, method, ...context },
-    originalError: serializedError as any,
+    originalError,
   }
 }

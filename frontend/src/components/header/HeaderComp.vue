@@ -18,7 +18,6 @@ const navigation: {
   { href: '/manage-fieldinfo', name: '圃場登録・管理' },
   { href: '/create-vfm', name: '可変施肥マップ作成' },
   { href: '/manage-vfm', name: '可変施肥マップ管理' },
-  { href: '/error-log', name: 'エラーログ' },
   { href: '/about', name: '本サイトについて' },
 ]
 </script>
