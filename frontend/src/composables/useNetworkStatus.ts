@@ -22,7 +22,7 @@ export function useNetworkStatus() {
     isOnline.value = false
     const error = createNetworkError(
       'network_offline',
-      new Error('ネットワーク状態変更: offline'),
+      new Error('Network connection lost'),
       { networkStatus: 'offline', userAgent: navigator.userAgent },
     )
     handleError({

@@ -24,9 +24,25 @@ export function useErrorHandler() {
   const handleError = (error: AppError, options?: Partial<ErrorHandlerOptions>) => {
     const opts = { ...DEFAULT_OPTIONS, ...options }
 
-    // エラーストアに追加
+    // エラーストアに追加（originalErrorをシリアライズ可能な形式に変換）
     if (opts.logToStore) {
-      errorStore.addError(error)
+      const serializedError: AppError = {
+        ...error,
+        originalError: error.originalError ? {
+          name: error.originalError.name || 'Unknown',
+          message: error.originalError.message || 'No message',
+          stack: error.originalError.stack?.slice(0, 1000),
+          // AggregateErrorの場合はerrorsも保存
+          ...(error.originalError instanceof AggregateError && {
+            errors: error.originalError.errors.slice(0, 10).map(e => ({
+              name: e.name || 'Unknown',
+              message: e.message || 'No message',
+              stack: e.stack?.slice(0, 500)
+            }))
+          })
+        } as any : undefined
+      }
+      errorStore.addError(serializedError)
     }
 
     // コンソールログ

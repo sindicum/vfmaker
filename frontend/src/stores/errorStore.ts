@@ -16,8 +16,26 @@ export const useErrorStore = defineStore('error', () => {
     errors.value = errors.value.filter((e) => {
       return now - e.timestamp.getTime() < ERROR_RETENTION_TIME
     })
+    
+    // エラーオブジェクトをシリアライズ可能な形式にクリーンアップ
+    const cleanError: AppError = {
+      id: error.id,
+      category: error.category,
+      severity: error.severity,
+      message: error.message,
+      userMessage: error.userMessage,
+      timestamp: error.timestamp,
+      context: error.context ? JSON.parse(JSON.stringify(error.context)) : undefined,
+      // originalErrorは循環参照を避けるため、基本情報のみ保持
+      originalError: error.originalError ? {
+        name: error.originalError.name,
+        message: error.originalError.message,
+        stack: error.originalError.stack?.slice(0, 1000) // スタックトレースを制限
+      } as any : undefined
+    }
+    
     // 新しいエラーを追加
-    errors.value.push(error)
+    errors.value.push(cleanError)
 
     // 重複エラーの除去（5分以内の同一エラー）
     const duplicateThreshold = 5 * 60 * 1000

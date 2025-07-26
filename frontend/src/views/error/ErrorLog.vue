@@ -13,17 +13,28 @@ const expandedErrors = ref<Record<string, boolean>>({})
 
 // フィルタされたエラー
 const filteredErrors = computed(() => {
-  return errorStore.errors
-    .filter((error) => {
-      if (selectedCategory.value !== 'all' && error.category !== selectedCategory.value) {
-        return false
-      }
-      if (selectedSeverity.value !== 'all' && error.severity !== selectedSeverity.value) {
-        return false
-      }
-      return true
-    })
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()) // 新しい順
+  try {
+    return errorStore.errors
+      .filter((error) => {
+        if (!error || !error.id) return false // nullチェック
+        if (selectedCategory.value !== 'all' && error.category !== selectedCategory.value) {
+          return false
+        }
+        if (selectedSeverity.value !== 'all' && error.severity !== selectedSeverity.value) {
+          return false
+        }
+        return true
+      })
+      .sort((a, b) => {
+        // 安全な日付比較
+        const aTime = a?.timestamp ? new Date(a.timestamp).getTime() : 0
+        const bTime = b?.timestamp ? new Date(b.timestamp).getTime() : 0
+        return bTime - aTime
+      })
+  } catch (e) {
+    console.error('Error filtering errors:', e)
+    return []
+  }
 })
 
 // エラー詳細の展開・折りたたみ
@@ -40,14 +51,32 @@ const clearAllErrors = () => {
 
 // エラーのエクスポート
 const exportErrors = () => {
-  const dataStr = JSON.stringify(filteredErrors.value, null, 2)
-  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
-  const exportFileDefaultName = `error-log-${new Date().toISOString()}.json`
-  
-  const linkElement = document.createElement('a')
-  linkElement.setAttribute('href', dataUri)
-  linkElement.setAttribute('download', exportFileDefaultName)
-  linkElement.click()
+  try {
+    // シリアライズ可能なデータのみ抽出
+    const safeErrors = filteredErrors.value.map(error => ({
+      id: error.id,
+      category: error.category,
+      severity: error.severity,
+      message: error.message,
+      userMessage: error.userMessage,
+      timestamp: error.timestamp?.toISOString ? error.timestamp.toISOString() : String(error.timestamp),
+      context: error.context || {},
+      originalErrorName: error.originalError?.name || 'Unknown',
+      originalErrorMessage: error.originalError?.message || 'No message'
+    }))
+    
+    const dataStr = JSON.stringify(safeErrors, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
+    const exportFileDefaultName = `error-log-${new Date().toISOString()}.json`
+    
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
+  } catch (e) {
+    console.error('Export error:', e)
+    alert('エラーログのエクスポートに失敗しました')
+  }
 }
 
 // カテゴリの色
@@ -107,6 +136,18 @@ const getSafeAggregateErrors = (error: any) => {
     return error.errors.slice(0, 10).map(getErrorInfo) // 最大10個まで
   } catch {
     return []
+  }
+}
+
+// タイムスタンプを安全にフォーマット
+const formatTimestamp = (timestamp: any) => {
+  try {
+    if (!timestamp) return 'Unknown time'
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+    if (isNaN(date.getTime())) return 'Invalid date'
+    return date.toLocaleString('ja-JP')
+  } catch {
+    return 'Error formatting date'
   }
 }
 </script>
@@ -200,7 +241,7 @@ const getSafeAggregateErrors = (error: any) => {
                       {{ error.severity }}
                     </span>
                     <span class="text-sm text-gray-500">
-                      {{ error.timestamp.toLocaleString('ja-JP') }}
+                      {{ formatTimestamp(error.timestamp) }}
                     </span>
                   </div>
                   <p class="text-gray-800 font-medium">{{ error.message }}</p>
