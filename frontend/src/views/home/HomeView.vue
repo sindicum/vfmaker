@@ -66,9 +66,11 @@ watch(isCogLayerVisible, async () => {
 
   if (isCogLayerVisible.value) {
     await addCog()
+    if (mapInstance.getLayer('registeredFillLayer')) {
+      mapInstance.moveLayer('cogLayer', 'registeredFillLayer')
+    }
   } else {
-    mapInstance.removeLayer('cogLayer')
-    mapInstance.removeSource('cogSource')
+    removeCog()
   }
 })
 </script>
