@@ -9,8 +9,8 @@ permissions:
 
 env:
   VITE_API_URL: ${{ vars.VITE_API_URL }}
-  VITE_PMTILES_URL: ${{ vars.VITE_PMTILES_URL_DEV }}
-  VITE_OM_MAP_URL: ${{ vars.VITE_OM_MAP_URL_DEV }}
+  VITE_PMTILES_URL: ${{ vars.VITE_PMTILES_URL }}
+  VITE_OM_MAP_URL: ${{ vars.VITE_OM_MAP_URL }}
   VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
   VITE_AWS_APIGATEWAY_KEY: ${{ secrets.VITE_AWS_APIGATEWAY_KEY }}
   ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
