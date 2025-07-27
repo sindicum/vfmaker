@@ -1,4 +1,4 @@
-import { addProtocol } from 'maplibre-gl'
+import { addProtocol, removeProtocol } from 'maplibre-gl'
 import {
   TerraDraw,
   TerraDrawSelectMode,
@@ -137,6 +137,7 @@ export function removePMTitlesSource(map: MaplibreMap) {
   if (map?.getSource(PMTILES.sourceId)) {
     map?.removeSource(PMTILES.sourceId)
   }
+  removeProtocol('pmtiles')
 }
 
 export function removePMTitlesLayer(map: MaplibreMap) {

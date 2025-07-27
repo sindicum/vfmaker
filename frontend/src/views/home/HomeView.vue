@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch, inject, ref, onBeforeMount } from 'vue'
-
+import { onMounted, watch, inject, ref, onBeforeUnmount } from 'vue'
 import MapBase from '@/components/map/MapBase.vue'
 
 import { useHumusCog } from '@/composables/useHumusCog'
@@ -17,7 +16,7 @@ import {
 } from '../create-variable-fertilization/handler/LayerHandler'
 
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
-const { addCog } = useHumusCog(map)
+const { addCog, removeCog } = useHumusCog(map)
 const isCogLayerVisible = ref(true)
 const store = useStore()
 const persistStore = usePersistStore()
@@ -35,12 +34,13 @@ onMounted(() => {
   })
 })
 
-onBeforeMount(() => {
+onBeforeUnmount(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
   removeLayer(mapInstance)
   removeSource(mapInstance)
+  removeCog()
 })
 
 watch(

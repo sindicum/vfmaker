@@ -1,4 +1,4 @@
-import { addProtocol } from 'maplibre-gl'
+import { addProtocol, removeProtocol } from 'maplibre-gl'
 import { encode } from 'fast-png'
 import { fromUrl } from 'geotiff'
 import { useErrorHandler, createGeospatialError } from '@/errors'
@@ -221,7 +221,21 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     }
   }
 
+  const removeCog = () => {
+    if (map?.value) {
+      if (map.value.getLayer('cogLayer')) {
+        map.value.removeLayer('cogLayer')
+      }
+      if (map.value.getSource('cogSource')) {
+        map.value.removeSource('cogSource')
+      }
+    }
+    removeProtocol('cog')
+    isProtocolAdded = false
+  }
+
   return {
     addCog,
+    removeCog,
   }
 }
