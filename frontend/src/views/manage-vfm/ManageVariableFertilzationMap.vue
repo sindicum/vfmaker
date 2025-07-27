@@ -154,12 +154,28 @@ onUnmounted(() => {
 watch(
   () => store.currentGeolocation,
   () => {
-    // store.setMessage(
-    //   'Info',
-    //   `緯度${store.currentGeolocation.lat} ,経度${store.currentGeolocation.lng}`,
-    // )
     resetCurrentGridInfo()
     checkCurrentPositionInGrid()
+  },
+)
+
+// マップの背景地図切り替え時の処理
+watch(
+  () => store.mapStyleIndex,
+  () => {
+    const mapInstance = map?.value
+    if (!mapInstance) return
+
+    mapInstance.once('idle', () => {
+      addSource(mapInstance, persistStore.featurecollection)
+      addLayer(mapInstance)
+
+      persistStore.variableFertilizationMaps.forEach((v) => {
+        const vfm = v.featureCollection
+        const id = v.id
+        addVraMap(mapInstance, vfm, id)
+      })
+    })
   },
 )
 
@@ -533,10 +549,10 @@ const selectedDeleteAllDialog = (selected: boolean) => {
               <div class="text-center text-sm text-gray-600">現在位置が取得できません</div>
               <button
                 @click="isHelpDialogOpen = true"
-                class="w-5 h-5 rounded-full bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center"
+                class="h-5 w-12 rounded-md bg-amber-600 text-white text-xs hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center"
                 title="位置情報の取得方法について"
               >
-                ?
+                Help
               </button>
             </div>
           </div>
@@ -580,7 +596,6 @@ const selectedDeleteAllDialog = (selected: boolean) => {
               </button>
             </div>
             <div class="text-sm text-gray-600 space-y-3">
-              <p><strong>位置情報を取得する方法：</strong></p>
               <ol class="list-decimal list-inside space-y-2 ml-2">
                 <li>
                   地図上の位置情報ボタンを押す<br />
