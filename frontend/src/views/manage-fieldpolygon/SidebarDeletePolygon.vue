@@ -35,6 +35,7 @@ function deleteRegisteredPolygon() {
       store.setMessage('Error', 'ソースが見つかりません')
     }
     store.setMessage('Info', 'ポリゴンを削除しました')
+    persistStore.removeVariableFertilizationMap(deletePolygonId.value!)
   } else {
     store.setMessage('Error', 'ポリゴンを選択してください')
   }
@@ -66,6 +67,7 @@ const selectedDialog = (selected: boolean) => {
   if (!mapInstance) return
 
   if (selected) {
+    // ポリゴンを全削除
     persistStore.clearFeatureCollection()
     const source = mapInstance.getSource('registeredFields') as GeoJSONSource
     if (source) {
@@ -73,6 +75,9 @@ const selectedDialog = (selected: boolean) => {
     }
     store.alertMessage.alertType = 'Info'
     store.alertMessage.message = `ポリゴンをすべて削除しました`
+
+    // 作成した可変施肥マップを削除
+    persistStore.deleteVariableFertilizationMaps()
   }
 
   isOpenDialog.value = false

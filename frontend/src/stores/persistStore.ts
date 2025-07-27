@@ -27,28 +27,34 @@ export const usePersistStore = defineStore(
 
     const addFeature = (feature: Feature<Polygon>) => {
       if (feature.id === undefined) {
-        store.alertMessage.alertType = 'Error'
-        store.alertMessage.message = 'ポリゴンIDが設定されていません'
+        store.setMessage('Error', 'ポリゴンIDが設定されていません')
         return
       }
       const id = String(feature.id)
+      const geometryType = feature.geometry.type
+      const geometryCoordinates = feature.geometry.coordinates
 
-      const geometry = feature.geometry
+      if (geometryType !== 'Polygon') {
+        store.setMessage('Error', 'Polygon以外の登録はできません（MultiPolygonは未対応）')
+        return
+      }
+
       if (featurecollection.value.features.length < maxFeatures) {
         featurecollection.value.features.push({
           type: 'Feature',
-          geometry: geometry,
+          geometry: {
+            type: 'Polygon',
+            coordinates: geometryCoordinates,
+          },
           properties: { id: id },
         })
-        store.alertMessage.alertType = 'Info'
-        store.alertMessage.message = 'ポリゴンを登録しました'
+        store.setMessage('Info', 'ポリゴンを登録しました')
       } else {
-        store.alertMessage.alertType = 'Error'
-        store.alertMessage.message = `ポリゴン登録上限（${maxFeatures}筆）に達してます`
+        store.setMessage('Error', `ポリゴン登録上限（${maxFeatures}筆）に達してます`)
       }
     }
 
-    const addViewVariableFertilizationMap = (
+    const addVariableFertilizationMap = (
       features: Feature<Polygon>[],
       activeFeatureId: string,
       totalAmount: number,
@@ -70,7 +76,7 @@ export const usePersistStore = defineStore(
       featurecollection.value.features = []
     }
 
-    const clearViewVariableFertilizationMap = () => {
+    const deleteVariableFertilizationMaps = () => {
       variableFertilizationMaps.value = []
     }
 
@@ -82,13 +88,14 @@ export const usePersistStore = defineStore(
     }
 
     return {
+      maxFeatures,
       featurecollection,
       centerPosition,
       variableFertilizationMaps,
       addFeature,
       clearFeatureCollection,
-      addViewVariableFertilizationMap,
-      clearViewVariableFertilizationMap,
+      addVariableFertilizationMap,
+      deleteVariableFertilizationMaps,
       removeVariableFertilizationMap,
     }
   },

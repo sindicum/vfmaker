@@ -348,7 +348,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
         </button>
       </div>
 
-      <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'text-xl font-bold']">
+      <div :class="[isDesktop ? 'mt-2 mb-6 text-center' : 'hidden', 'text-lg font-bold']">
         <span>可変施肥マップの作成</span>
       </div>
       <ol

@@ -55,7 +55,7 @@ watch([isOverwriteSave], () => {
 
 // 保存処理を実行
 const executeSave = () => {
-  persistStore.addViewVariableFertilizationMap(
+  persistStore.addVariableFertilizationMap(
     applicationGridFeatures.value ?? [],
     activeFeatureId.value ?? '',
     Math.round(totalAmount.value ?? 0),

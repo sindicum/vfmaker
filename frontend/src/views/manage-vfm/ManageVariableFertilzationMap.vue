@@ -11,7 +11,7 @@ import {
   point as turfPoint,
   buffer as turfBuffer,
 } from '@turf/turf'
-
+import Dialog from '@/components/DialogComp.vue'
 import {
   addSource,
   addLayer,
@@ -27,10 +27,12 @@ const persistStore = usePersistStore()
 const store = useStore()
 
 // タブの状態管理を追加
-const activeTab = ref<'realtime' | 'management'>('realtime')
+const activeTab = ref<'realtime' | 'management'>('management')
 
 // ヘルプダイアログの状態管理
 const isHelpDialogOpen = ref(false)
+// 全削除ダイアログの状態管理
+const isOpenDeleteAllDialog = ref<boolean>(false)
 
 // 総施肥量と面積の合計を計算
 const totalFertilizerAmount = computed(() => {
@@ -161,15 +163,18 @@ watch(
   },
 )
 
-const clearVfm = () => {
+const deleteAllVfm = () => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  persistStore.variableFertilizationMaps.forEach((vfm) => {
-    removeVraMap(mapInstance, vfm.id)
-  })
+  const vfmLength = persistStore.variableFertilizationMaps.length
 
-  persistStore.clearViewVariableFertilizationMap()
+  if (vfmLength === 0) {
+    store.setMessage('Error', '可変施肥マップがありません')
+    return
+  }
+
+  isOpenDeleteAllDialog.value = true
 }
 
 const removeVfm = (id: string) => {
@@ -179,12 +184,9 @@ const removeVfm = (id: string) => {
   try {
     removeVraMap(mapInstance, id)
     persistStore.removeVariableFertilizationMap(id)
-
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = '施肥マップを削除しました'
+    store.setMessage('Info', '可変施肥マップを削除しました')
   } catch (error) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = '施肥マップの削除に失敗しました'
+    store.setMessage('Error', '可変施肥マップの削除に失敗しました')
   }
 }
 
@@ -264,6 +266,23 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
     store.alertMessage.message = 'マップの表示範囲の調整に失敗しました'
   }
 }
+
+const selectedDeleteAllDialog = (selected: boolean) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (selected) {
+    persistStore.variableFertilizationMaps.forEach((vfm) => {
+      // 表示されているマップを削除
+      removeVraMap(mapInstance, vfm.id)
+    })
+    // ローカルストレージのデータを削除
+    persistStore.deleteVariableFertilizationMaps()
+
+    store.setMessage('Info', '可変施肥マップをすべて削除しました')
+  }
+  isOpenDeleteAllDialog.value = false
+}
 </script>
 
 <template>
@@ -278,12 +297,21 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
       ]"
     >
       <div v-show="isDesktop" class="mt-2 mb-6">
-        <h2 class="text-xl font-bold text-gray-800 text-center">可変施肥マップ管理</h2>
+        <h2 class="text-lg font-bold text-gray-800 text-center">可変施肥マップ表示・出力・管理</h2>
       </div>
 
       <!-- タブメニュー -->
       <div :class="[isDesktop ? 'mb-4' : 'mb-2']">
         <div class="border-b border-gray-200 flex col-span-4">
+          <button
+            :class="[
+              activeTab === 'management' ? 'bg-gray-50 shadow-sm' : 'bg-gray-200 text-gray-400',
+              'flex-1 py-2 px-3 text-xs sm:text-sm font-medium text-center border-2 border-transparent rounded-t-xl transition-all duration-200 ',
+            ]"
+            @click="activeTab = 'management'"
+          >
+            マップ出力・管理
+          </button>
           <button
             :class="[
               activeTab === 'realtime' ? 'bg-gray-50 shadow-sm' : 'bg-gray-200 text-gray-400',
@@ -296,58 +324,6 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
               <div class="text-xs sm:text-sm">施肥量表示</div>
             </div>
           </button>
-          <button
-            :class="[
-              activeTab === 'management' ? 'bg-gray-50 shadow-sm' : 'bg-gray-200 text-gray-400',
-              'flex-1 py-2 px-3 text-xs sm:text-sm font-medium text-center border-2 border-transparent rounded-t-xl transition-all duration-200 ',
-            ]"
-            @click="activeTab = 'management'"
-          >
-            マップ出力・管理
-          </button>
-        </div>
-      </div>
-
-      <!-- リアルタイム施肥量表示タブのコンテンツ -->
-      <div v-show="activeTab === 'realtime'" class="space-y-4">
-        <!-- 現在位置のグリッド情報 -->
-        <div v-if="currentGridInfo" class="p-4 bg-amber-50 rounded-lg border border-amber-200">
-          <h3 class="font-semibold text-amber-800 mb-3 text-center">現在位置の施肥量</h3>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-amber-700 mb-1">
-              {{ currentGridInfo.fertilizerAmount }}kg/10a
-            </div>
-          </div>
-        </div>
-
-        <!-- 位置情報が無効な場合の表示 -->
-        <div
-          v-else-if="store.currentGeolocation.lat === null && store.currentGeolocation.lng === null"
-        >
-          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex items-center justify-center gap-2">
-              <div class="text-center text-sm text-gray-600">現在位置が取得できません</div>
-              <button
-                @click="isHelpDialogOpen = true"
-                class="w-5 h-5 rounded-full bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center"
-                title="位置情報の取得方法について"
-              >
-                ?
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 現在位置がVFMエリア内にある場合の表示 -->
-        <div
-          v-else-if="
-            store.currentGeolocation.lat !== null &&
-            store.currentGeolocation.lng !== null &&
-            currentGridInfo === null
-          "
-          class="p-4 bg-gray-50 rounded-lg border border-gray-200"
-        >
-          <div class="text-center text-sm text-gray-600">現在位置は登録されたVFMエリア外です</div>
         </div>
       </div>
 
@@ -378,11 +354,11 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
             >
               <div class="text-gray-600 text-xs flex items-center justify-center">施肥量合計</div>
               <div class="font-bold text-xl text-amber-700 flex items-center justify-center">
-                {{ totalFertilizerAmount.toFixed(1) }}kg
+                {{ totalFertilizerAmount.toFixed(0) }}<span class="mx-1">kg</span>
               </div>
               <div class="text-gray-600 text-xs flex items-center justify-center">面積合計</div>
               <div class="font-bold text-xl text-amber-700 flex items-center justify-center">
-                {{ totalArea.toFixed(1) }}a
+                {{ totalArea.toFixed(0) }}<span class="mx-1"></span>a
               </div>
             </div>
           </div>
@@ -391,7 +367,7 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
           <div
             v-if="persistStore.variableFertilizationMaps.length > 0"
             :class="[
-              isDesktop ? 'max-h-[calc(100vh-30rem)]' : 'max-h-40 sm:max-h-64',
+              isDesktop ? 'max-h-[calc(100vh-30rem)]' : 'max-h-44 sm:max-h-64',
               'bg-white rounded-lg border border-gray-200  overflow-y-auto',
             ]"
           >
@@ -436,9 +412,11 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
                     </span>
                   </td>
                   <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                    {{ vfm.totalAmount }}kg
+                    {{ vfm.totalAmount }}<span class="mx-0.5">kg</span>
                   </td>
-                  <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{{ vfm.area }}a</td>
+                  <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                    {{ vfm.area.toFixed(0) }}<span class="mx-0.5">a</span>
+                  </td>
                   <td class="px-3 py-2 whitespace-nowrap text-center">
                     <div
                       :class="[
@@ -519,7 +497,7 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
         <div v-show="isDesktop" class="mt-4 pt-4 border-t border-gray-300 flex justify-center">
           <button
             class="flex items-center px-2 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 h-8"
-            @click="clearVfm"
+            @click="deleteAllVfm"
           >
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -531,6 +509,49 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
             </svg>
             保存データの全削除
           </button>
+        </div>
+      </div>
+
+      <!-- リアルタイム施肥量表示タブのコンテンツ -->
+      <div v-show="activeTab === 'realtime'" class="space-y-4">
+        <!-- 現在位置のグリッド情報 -->
+        <div v-if="currentGridInfo" class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <h3 class="font-semibold text-amber-800 mb-3 text-center">現在位置の施肥量</h3>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-amber-700 mb-1">
+              {{ currentGridInfo.fertilizerAmount }}kg/10a
+            </div>
+          </div>
+        </div>
+
+        <!-- 位置情報が無効な場合の表示 -->
+        <div
+          v-else-if="store.currentGeolocation.lat === null && store.currentGeolocation.lng === null"
+        >
+          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex items-center justify-center gap-2">
+              <div class="text-center text-sm text-gray-600">現在位置が取得できません</div>
+              <button
+                @click="isHelpDialogOpen = true"
+                class="w-5 h-5 rounded-full bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center"
+                title="位置情報の取得方法について"
+              >
+                ?
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 現在位置がVFMエリア内にある場合の表示 -->
+        <div
+          v-else-if="
+            store.currentGeolocation.lat !== null &&
+            store.currentGeolocation.lng !== null &&
+            currentGridInfo === null
+          "
+          class="p-4 bg-gray-50 rounded-lg border border-gray-200"
+        >
+          <div class="text-center text-sm text-gray-600">現在位置は登録されたVFMエリア外です</div>
         </div>
       </div>
     </div>
@@ -601,5 +622,12 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
         </div>
       </div>
     </div>
+
+    <!-- 全削除を選択したときにダイアログを表示 -->
+    <Dialog
+      message="本当に削除しますか"
+      :isOpen="isOpenDeleteAllDialog!"
+      @selected="selectedDeleteAllDialog"
+    />
   </main>
 </template>

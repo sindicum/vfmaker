@@ -8,6 +8,7 @@ import SidebarCreatePolygon from './SidebarCreatePolygon.vue'
 import SidebarRegisterFudepoly from './SidebarRegisterFudepoly.vue'
 import SidebarUpdatePolygon from './SidebarUpdatePolygon.vue'
 import SidebarDeletePolygon from './SidebarDeletePolygon.vue'
+import FileImportDialog from './components/FileImportDialog.vue'
 
 import {
   addSource,
@@ -42,6 +43,7 @@ const createPolygonActive = ref(false)
 const registerFudepolyActive = ref(false)
 const updatePolygonActive = ref(false)
 const deletePolygonActive = ref(false)
+const isOpenFileImportDialog = ref(false)
 
 const currentActiveName = computed(() => {
   if (createPolygonActive.value) return 'ポリゴンの新規作成'
@@ -217,21 +219,15 @@ watch(deletePolygonActive, (isActive) => {
   }
 })
 
-const onClickCreatePolygonBtn = () => {
-  createPolygonActive.value = true
-}
+const onClickCreatePolygonBtn = () => (createPolygonActive.value = true)
 
-const onClickRegisterFudepolyBtn = () => {
-  registerFudepolyActive.value = true
-}
+const onClickRegisterFudepolyBtn = () => (registerFudepolyActive.value = true)
 
-const onClickUpdatePolygonBtn = () => {
-  updatePolygonActive.value = true
-}
+const onClickRegisterFileBtn = () => (isOpenFileImportDialog.value = true)
 
-const onClickDeletePolygonBtn = () => {
-  deletePolygonActive.value = true
-}
+const onClickUpdatePolygonBtn = () => (updatePolygonActive.value = true)
+
+const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
 </script>
 
 <template>
@@ -246,7 +242,7 @@ const onClickDeletePolygonBtn = () => {
       ]"
     >
       <div v-if="isDesktop">
-        <div class="mt-2 mb-6 text-center font-semibold">圃場登録管理</div>
+        <div class="mt-2 mb-6 text-center font-semibold text-lg">圃場ポリゴン管理</div>
         <div v-show="currentActiveName !== ''">
           <div
             class="bg-slate-200 text-slate-500 flex-1 w-full justify-center px-4 py-2 rounded-md border border-transparent shadow-sm text-center"
@@ -257,18 +253,18 @@ const onClickDeletePolygonBtn = () => {
         </div>
       </div>
 
-      <div v-if="!isDesktop" class="flex flex-row font-semibold mx-2 my-1">
+      <!-- <div v-if="!isDesktop" class="flex flex-row font-semibold mx-2 my-1">
         <div class="pb-2">圃場登録管理</div>
         <div v-show="currentActiveName !== ''" class="">
           <span class="mx-4">></span>{{ currentActiveName }}
         </div>
-      </div>
+      </div> -->
 
       <div v-show="mapLoaded" class="">
         <div
           v-if="currentActiveName == ''"
           :class="[
-            isDesktop ? 'gird-cols-1 grid-rows-4' : 'grid-cols-4 grid-rows-1 text-sm sm:text-base',
+            isDesktop ? 'gird-cols-1 grid-rows-4' : 'grid-cols-5 grid-rows-1 text-xs sm:text-base',
             'grid lg:gap-4 gap-2 text-slate-800',
           ]"
         >
@@ -278,7 +274,7 @@ const onClickDeletePolygonBtn = () => {
             class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="createPolygonActive"
           >
-            ポリゴンの<br v-if="!isDesktop" />新規作成
+            ポリゴン<br v-if="!isDesktop" />新規作成
           </button>
           <button
             type="button"
@@ -286,7 +282,15 @@ const onClickDeletePolygonBtn = () => {
             class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="registerFudepolyActive"
           >
-            筆ポリゴン<br v-if="!isDesktop" />からの登録
+            筆ポリ<br v-if="!isDesktop" />から登録
+          </button>
+          <button
+            type="button"
+            @click="onClickRegisterFileBtn"
+            class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
+            v-bind:disabled="registerFudepolyActive"
+          >
+            SHP<br v-if="!isDesktop" />から登録
           </button>
           <button
             type="button"
@@ -294,7 +298,7 @@ const onClickDeletePolygonBtn = () => {
             class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="updatePolygonActive"
           >
-            ポリゴンの<br v-if="!isDesktop" />更新
+            ポリゴン<br v-if="!isDesktop" />更新
           </button>
           <button
             type="button"
@@ -302,7 +306,7 @@ const onClickDeletePolygonBtn = () => {
             class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
             v-bind:disabled="deletePolygonActive"
           >
-            ポリゴンの<br v-if="!isDesktop" />削除
+            ポリゴン<br v-if="!isDesktop" />削除
           </button>
         </div>
 
@@ -343,5 +347,10 @@ const onClickDeletePolygonBtn = () => {
     </div>
 
     <MapBase />
+
+    <FileImportDialog
+      v-if="isOpenFileImportDialog"
+      v-model:is-open-dialog="isOpenFileImportDialog"
+    />
   </main>
 </template>
