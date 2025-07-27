@@ -3,8 +3,7 @@ import { usePersistStore } from '@/stores/persistStore'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStore } from '@/stores/store'
 
-import { fromUrl } from 'geotiff'
-import { getSharedPool, resetPool } from '@/utils/geotiffPool'
+import { fromUrl, Pool } from 'geotiff'
 import { useErrorHandler } from '@/errors'
 import { createGeospatialError } from '@/errors'
 import proj4 from 'proj4'
@@ -350,47 +349,50 @@ export function useGridHandler(map: MaplibreRef) {
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
     const { handleError } = useErrorHandler()
-    
+
     try {
       const tiff = await fromUrl(url)
-      const pool = getSharedPool()
+      const pool = new Pool()
       const cogSource = await tiff.readRasters({
         bbox: bbox3857,
         samples: [0], // 取得するバンドを指定
         interleave: true,
         pool,
       }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
+
+      // 成功時もPoolを破棄
+      if (pool && 'destroy' in pool && typeof pool.destroy === 'function') {
+        pool.destroy()
+      }
+
       return cogSource
     } catch (error) {
       // エラーの詳細情報を収集
       const errorDetails = {
         userAgent: navigator.userAgent,
-        isIOSChrome: /CriOS/.test(navigator.userAgent),
         cogUrl: url,
         bbox: bbox3857,
         errorType: (error as Error).constructor.name,
         errorMessage: (error as Error).message,
-        aggregateErrors: error instanceof AggregateError ? 
-          error.errors.map(e => ({
-            type: e.constructor.name,
-            message: e.message,
-            stack: e.stack
-          })) : undefined,
-        timestamp: new Date().toISOString()
+        aggregateErrors:
+          error instanceof AggregateError
+            ? error.errors.map((e) => ({
+                type: e.constructor.name,
+                message: e.message,
+                stack: e.stack,
+              }))
+            : undefined,
+        timestamp: new Date().toISOString(),
       }
-      
+
       // エラーハンドラーを使用してユーザーに通知
       const appError = createGeospatialError(
         `COGデータ読み込み: ${(error as Error).message}`,
         error as Error,
-        errorDetails
+        errorDetails,
       )
       handleError(appError)
-      
-      // iOS ChromeでPoolエラーが発生した場合、Poolなしで再試行
-      console.warn('GeoTIFF Pool error, retrying without pool:', error)
-      resetPool() // Poolをリセット
-      
+
       try {
         const tiff = await fromUrl(url)
         const cogSource = await tiff.readRasters({
@@ -405,7 +407,7 @@ export function useGridHandler(map: MaplibreRef) {
         const retryAppError = createGeospatialError(
           `COGデータ読み込み再試行失敗: ${(retryError as Error).message}`,
           retryError as Error,
-          { ...errorDetails, retry: true }
+          { ...errorDetails, retry: true },
         )
         handleError(retryAppError)
         throw retryError // エラーを上位に伝播

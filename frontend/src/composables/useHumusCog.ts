@@ -1,8 +1,7 @@
 import { addProtocol, removeProtocol } from 'maplibre-gl'
 import { encode } from 'fast-png'
-import { fromUrl } from 'geotiff'
+import { Pool, fromUrl } from 'geotiff'
 import { useErrorHandler, createGeospatialError } from '@/errors'
-import { getSharedPool, resetPool } from '@/utils/geotiffPool'
 
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap, RasterSourceSpecification } from '@/types/maplibre'
@@ -12,6 +11,31 @@ let isProtocolAdded = false
 
 export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
   const { handleError } = useErrorHandler()
+  
+  // インスタンスごとのPool管理
+  let instancePool: Pool | null = null
+  
+  // Pool取得関数（インスタンス内）
+  const getInstancePool = (): Pool => {
+    if (!instancePool) {
+      instancePool = new Pool()
+    }
+    return instancePool
+  }
+  
+  // Pool破棄関数
+  const destroyInstancePool = (): void => {
+    if (instancePool) {
+      try {
+        if ('destroy' in instancePool && typeof instancePool.destroy === 'function') {
+          instancePool.destroy()
+        }
+      } catch (e) {
+        console.error('Pool destroy error:', e)
+      }
+      instancePool = null
+    }
+  }
   // RGB Color
   const red: [number, number, number] = [215, 25, 28]
   const orange: [number, number, number] = [253, 174, 97]
@@ -90,21 +114,23 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
   const addProtocolCog = (tiff: GeoTIFF) => {
     addProtocol('cog', async (params) => {
+      let z = 0, x = 0, y = 0
+      
       try {
         if (!params.url) throw new Error('Invalid COG URL')
 
         const segments = params.url.split('/')
         if (segments.length < 3) throw new Error('Invalid tile request format')
 
-        const [z, x, y] = segments.slice(segments.length - 3).map((v) => parseInt(v, 10))
+        ;[z, x, y] = segments.slice(segments.length - 3).map((v) => parseInt(v, 10))
         if (isNaN(z) || isNaN(x) || isNaN(y)) throw new Error('Invalid tile coordinates')
 
         const bbox = tileToMercatorBBox(x, y, z)
 
         let cogData
         try {
-          // 共有Poolを使用
-          const pool = getSharedPool()
+          // インスタンスPoolを使用
+          const pool = getInstancePool()
           cogData = await tiff.readRasters({
             bbox,
             samples: [0], // 取得するバンドを指定
@@ -118,7 +144,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
           if (import.meta.env.MODE !== 'production') {
             console.warn('COG tile pool error, retrying without pool:', poolError)
           }
-          resetPool()
+          destroyInstancePool() // エラー時もPoolを破棄
           cogData = await tiff.readRasters({
             bbox,
             samples: [0],
@@ -153,9 +179,9 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
           handleError(
             createGeospatialError('COGタイル読み込み', error as Error, {
               url: params.url,
-              z,
-              x,
-              y,
+              z: z,
+              x: x,
+              y: y,
             }),
             {
               showUserNotification: false,
@@ -230,6 +256,8 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
         map.value.removeSource('cogSource')
       }
     }
+    // プロトコル削除前にPoolを破棄
+    destroyInstancePool()
     removeProtocol('cog')
     isProtocolAdded = false
   }
