@@ -7,10 +7,13 @@ import type { ShallowRef } from 'vue'
 import type { MaplibreMap, RasterSourceSpecification } from '@/types/maplibre'
 import type { GeoTIFF } from 'geotiff'
 
-let isProtocolAdded = false
-
 export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
   const { handleError } = useErrorHandler()
+  
+  // インスタンスごとの状態管理
+  let isProtocolAdded = false
+  let currentCogUrl: string | null = null
+  let currentTiff: GeoTIFF | null = null
   
   // インスタンスごとのPool管理
   let instancePool: Pool | null = null
@@ -197,10 +200,19 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
   const addCog = async () => {
     try {
-      if (!isProtocolAdded) {
+      // COG URLが変更されているか、まだプロトコルが登録されていない場合は再登録
+      if (!isProtocolAdded || currentCogUrl !== cogUrl) {
+        // 既存のプロトコルがある場合は削除
+        if (isProtocolAdded) {
+          removeProtocol('cog')
+          destroyInstancePool()
+        }
+        
+        // 新しいCOG URLで登録
+        currentCogUrl = cogUrl
+        currentTiff = await fromUrl(cogUrl)
+        addProtocolCog(currentTiff)
         isProtocolAdded = true
-        const tiff = await fromUrl(cogUrl)
-        addProtocolCog(tiff)
       }
 
       const source = await generateCogSource(cogUrl)
@@ -258,8 +270,16 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     }
     // プロトコル削除前にPoolを破棄
     destroyInstancePool()
-    removeProtocol('cog')
-    isProtocolAdded = false
+    
+    // プロトコルが登録されている場合のみ削除
+    if (isProtocolAdded) {
+      removeProtocol('cog')
+      isProtocolAdded = false
+    }
+    
+    // 状態をリセット
+    currentCogUrl = null
+    currentTiff = null
   }
 
   return {
