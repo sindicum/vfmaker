@@ -113,6 +113,9 @@ onMounted(() => {
       showUserLocation: true,
       trackUserLocation: true,
       showAccuracyCircle: false,
+      fitBoundsOptions: {
+        maxZoom: 15.5,
+      },
     })
 
     map.value.addControl(new ScaleControl())
