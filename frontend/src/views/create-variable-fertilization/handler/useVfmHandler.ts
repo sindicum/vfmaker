@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 
 import {
+  booleanDisjoint as turfBooleanDisjoint,
   booleanPointInPolygon as turfBooleanPointInPolygon,
   centroid as turfCentroid,
   distance as turfDistance,
@@ -71,8 +72,6 @@ export function useVfmHandler(map: MaplibreRef) {
     timeoutId = window.setTimeout(() => {
       const vrf = updateVrf(
         applicationGridFeatures.value,
-        applicationStep.value,
-        baseFertilizationAmount.value,
         configPersistStore.fiveStepsFertilization,
       )
 
@@ -85,12 +84,13 @@ export function useVfmHandler(map: MaplibreRef) {
 
   // グリッドと腐植ポイントから可変施肥メッシュを作成
   function createVfm(
+    activeFeature: Feature<Polygon, { area: number }>,
     baseGrid: BaseGrid,
     humusPoints: HumusPoints,
     fiveStepsFertilization: boolean,
   ) {
     try {
-      const humusMeanFeatures = getHumusMeanFeatures(baseGrid, humusPoints)
+      const humusMeanFeatures = getHumusMeanFeatures(activeFeature, baseGrid, humusPoints)
       // humusMeanFeaturesに対して、humus_meanの数値に基づきソート
       const sortedFeatures = humusMeanFeatures
         .filter((m) => m.properties !== null && typeof m.properties.humus_mean === 'number')
@@ -119,12 +119,16 @@ export function useVfmHandler(map: MaplibreRef) {
         const rangeMax = applicationStep.value[0]
         humusMeanFertilizerRateMap = distributeFertilizerRateStepless(humusMeanAreaMap, rangeMax)
       }
+
+      // 面積合計と施肥量合計を初期化
       totalArea.value = 0
       totalAmount.value = 0
       sortedFeatures.forEach((v) => {
         if (v.properties === null) return
 
         const humusMean = v.properties.humus_mean
+        const area = v.properties.area
+
         const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
 
         // 施肥量がマイナスの場合は0にする
@@ -132,13 +136,21 @@ export function useVfmHandler(map: MaplibreRef) {
           0,
           Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor)),
         )
-        const area = v.properties.area
-        v.properties.amount_fertilization_factor = amountFertilizationFactor
-        v.properties.amount_fertilization_unit = unit
-        if (unit !== 0) {
+        const missingHumusData = amountFertilizationFactor === -1 && v.properties.intersects
+
+        if (configPersistStore.missingHumusDataInterpolation && missingHumusData) {
+          v.properties.amount_fertilization_factor = 0
+          v.properties.amount_fertilization_unit = baseFertilizationAmount.value
+
           totalArea.value += area
+          totalAmount.value += (baseFertilizationAmount.value * area) / 1000
+        } else {
+          v.properties.amount_fertilization_factor = amountFertilizationFactor
+          v.properties.amount_fertilization_unit = unit
+
+          totalArea.value += unit !== 0 ? area : 0
+          totalAmount.value += (unit * area) / 1000
         }
-        totalAmount.value += (unit * area) / 1000
       })
       applicationGridFeatures.value = sortedFeatures
       // VraMapを表示
@@ -155,14 +167,13 @@ export function useVfmHandler(map: MaplibreRef) {
   }
 
   // VrfMapの再作成
-  function updateVrf(
-    applicationGrid: ApplicationGridFeatures,
-    applicationStep: [number, number, number, number, number],
-    fertilizationAmount: number,
-    fiveStepsFertilization: boolean,
-  ) {
+  function updateVrf(applicationGrid: ApplicationGridFeatures, fiveStepsFertilization: boolean) {
     applicationGrid.sort((m, n) => m.properties.humus_mean - n.properties.humus_mean)
-    const humusMeanAreaMap = new Map()
+
+    // キー:腐植値、値:面積合計
+    const humusMeanAreaMap = new Map<number, number>()
+
+    // 各腐植値をキーとした累計面積のMapオブジェクトを生成
     applicationGrid?.map((el) => {
       if (humusMeanAreaMap.has(el.properties.humus_mean)) {
         humusMeanAreaMap.set(
@@ -177,29 +188,47 @@ export function useVfmHandler(map: MaplibreRef) {
     // 腐植値に応じた施肥量加減割合のMapオブジェクトを生成
     let humusMeanFertilizerRateMap
     if (fiveStepsFertilization) {
-      humusMeanFertilizerRateMap = distributeFertilizerRateSteps(humusMeanAreaMap, applicationStep)
+      humusMeanFertilizerRateMap = distributeFertilizerRateSteps(
+        humusMeanAreaMap,
+        applicationStep.value,
+      )
     } else {
-      const rangeMax = applicationStep[0]
+      const rangeMax = applicationStep.value[0]
       humusMeanFertilizerRateMap = distributeFertilizerRateStepless(humusMeanAreaMap, rangeMax)
     }
 
+    // 面積合計と施肥量合計を初期化
     totalAmount.value = 0
     totalArea.value = 0
     applicationGrid.map((v) => {
       if (v.properties === null) return
 
       const humusMean = v.properties.humus_mean
+      const area = v.properties.area
+
       const amountFertilizationFactor = humusMeanFertilizerRateMap.get(humusMean) ?? 0
 
       // 施肥量がマイナスの場合は0にする
-      const unit = Math.max(0, Math.round(fertilizationAmount * (1 + amountFertilizationFactor)))
-      const area = v.properties.area
-      v.properties.amount_fertilization_factor = amountFertilizationFactor
-      v.properties.amount_fertilization_unit = unit
-      if (unit !== 0) {
+      const unit = Math.max(
+        0,
+        Math.round(baseFertilizationAmount.value * (1 + amountFertilizationFactor)),
+      )
+
+      const missingHumusData = amountFertilizationFactor === -1 && v.properties.intersects
+
+      if (configPersistStore.missingHumusDataInterpolation && missingHumusData) {
+        v.properties.amount_fertilization_factor = 0
+        v.properties.amount_fertilization_unit = baseFertilizationAmount.value
+
         totalArea.value += area
+        totalAmount.value += (baseFertilizationAmount.value * area) / 1000
+      } else {
+        v.properties.amount_fertilization_factor = amountFertilizationFactor
+        v.properties.amount_fertilization_unit = unit
+
+        totalArea.value += unit !== 0 ? area : 0
+        totalAmount.value += (unit * area) / 1000
       }
-      totalAmount.value += (unit * area) / 1000
     })
 
     return applicationGrid
@@ -207,6 +236,7 @@ export function useVfmHandler(map: MaplibreRef) {
 
   // グリッド内に含まれる腐植ポイントの平均値を算出
   function getHumusMeanFeatures(
+    activeFeature: Feature<Polygon, { area: number }>,
     baseGrid: BaseGrid,
     humusPoints: HumusPoints,
   ): ApplicationGridFeatures {
@@ -296,17 +326,23 @@ export function useVfmHandler(map: MaplibreRef) {
         }
       }
 
-      const meshFeature: Feature<Polygon, { humus_mean: number; area: number }> = {
+      const unitGridFeatureGeometry = polygons.features[i].geometry
+      const intersects = !turfBooleanDisjoint(activeFeature.geometry, unitGridFeatureGeometry)
+
+      const meshFeature: Feature<
+        Polygon,
+        { humus_mean: number; area: number; intersects: boolean }
+      > = {
         type: 'Feature',
         geometry: polygons.features[i].geometry,
         properties: {
           humus_mean: mean,
           area: polygons.features[i].properties.area,
+          intersects: intersects,
         },
       }
       humusMeanFeatures.push(meshFeature)
     }
-
     // デバッグ情報を出力
     // if (interpolatedMeshCount > 0) {
     //   console.log(
@@ -322,6 +358,14 @@ export function useVfmHandler(map: MaplibreRef) {
     humusMeanAreaMap: Map<number, number>,
     fertilizationFactorArray: number[],
   ): Map<number, number> {
+    const result = new Map<number, number>()
+
+    // 空のMapチェック
+    if (humusMeanAreaMap.size === 0) {
+      result.set(0, -1)
+      return result
+    }
+
     const humusMeanArray = Array.from(humusMeanAreaMap.keys())
     const areaArray = Array.from(humusMeanAreaMap.values())
     const newHumusMeanArray = []
@@ -334,7 +378,13 @@ export function useVfmHandler(map: MaplibreRef) {
       }
     }
 
-    const applicationRatioArray = redistributeFactor(areaArray, fertilizationFactorArray)
+    // 全ての腐植値が0の場合
+    if (newHumusMeanArray.length === 0) {
+      result.set(0, -1)
+      return result
+    }
+
+    const applicationRatioArray = redistributeFactor(newAreaArray, fertilizationFactorArray)
 
     const fertilizationRate = new Map(
       newHumusMeanArray.map((value, index) => [value, applicationRatioArray[index]]),
@@ -418,8 +468,13 @@ export function useVfmHandler(map: MaplibreRef) {
 
   // 各グリッドの可変施肥量率を設定した配列を生成
   function redistributeFactor(areaArray: number[], fertilizationFactorArray: number[]): number[] {
+    // 空配列チェック
+    if (areaArray.length === 0 || fertilizationFactorArray.length === 0) {
+      return []
+    }
+
     const fertilizationFactorIntervalRate = 1 / fertilizationFactorArray.length
-    const totalArea = areaArray.reduce((sum, el) => sum + el)
+    const totalArea = areaArray.reduce((sum, el) => sum + el, 0) // 初期値0を追加
     let intervalRate = fertilizationFactorIntervalRate
     const applicationRatioArray = []
     let fertilizationFactorArrayIndex = 0
@@ -475,5 +530,6 @@ export function useVfmHandler(map: MaplibreRef) {
     // テスト用にエクスポート
     distributeFertilizerRateSteps,
     distributeFertilizerRateStepless,
+    redistributeFactor,
   }
 }

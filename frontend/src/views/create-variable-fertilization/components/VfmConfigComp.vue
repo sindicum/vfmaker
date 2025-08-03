@@ -12,7 +12,7 @@ const closeDialog = () => {
   <div v-show="isOpenConfig" class="fixed top-0 left-0 w-screen h-screen bg-black/50 z-50">
     <div class="flex h-full items-center justify-center">
       <!-- ダイアログ本体 -->
-      <div class="relative w-72 bg-white rounded-md p-5">
+      <div class="relative w-80 bg-white rounded-md p-5">
         <!-- 見出し -->
         <div class="mt-2 mb-4 text-center font-semibold">可変施肥マップ作成の設定</div>
 
@@ -68,6 +68,22 @@ const closeDialog = () => {
           </div>
         </div>
 
+        <!-- ポリゴン内での腐植値欠損値の扱い -->
+        <div class="my-6">
+          <div class="text-rose-600 mb-1">ポリゴン内での腐植値欠損の扱い</div>
+          <div class="border-b border-gray-300 mb-2"></div>
+          <div class="flex flex-col gap-2 ml-2">
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                :checked="configPersistStore.missingHumusDataInterpolation"
+                @change="configPersistStore.missingHumusDataInterpolationChanged"
+                class="w-4 h-4 accent-indigo-600"
+              />
+              <span>基準施肥量で補間する</span>
+            </label>
+          </div>
+        </div>
         <!-- 腐植値の表示 -->
         <div class="my-6">
           <div class="text-rose-600 mb-1">腐植値の表示（mg/kg）</div>

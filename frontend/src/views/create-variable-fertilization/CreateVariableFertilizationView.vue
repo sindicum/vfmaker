@@ -195,12 +195,13 @@ watch(step2Status, (currentStatus, previousStatus) => {
         .filter((feature): feature is Feature<Polygon, { area: number }> => feature !== null)
 
       createVfm(
+        activeFeature.value,
         { type: 'FeatureCollection', features: intersections },
         humusPoint.value,
         fiveStepsFertilizationState,
       )
     } else {
-      createVfm(baseMesh.value, humusPoint.value, fiveStepsFertilizationState)
+      createVfm(activeFeature.value, baseMesh.value, humusPoint.value, fiveStepsFertilizationState)
     }
 
     delayedUpdateSidebar(step3Status, 'current')
