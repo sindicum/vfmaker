@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted, watch, inject, ref, onBeforeUnmount } from 'vue'
+import { watch, inject, ref, onBeforeUnmount } from 'vue'
 import MapBase from '@/components/map/MapBase.vue'
 
-import { useHumusCog } from '@/composables/useHumusCog'
+import { useHumusCog } from '@/components/common/composables/useHumusCog'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import type { ShallowRef } from 'vue'
 import type { MaplibreMap } from '@/types/maplibre'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import {
   addLayer,
   addSource,
@@ -17,22 +17,11 @@ import {
 
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
 const { addCog, removeCog } = useHumusCog(map)
-const isCogLayerVisible = ref(true)
+const isCogLayerVisible = ref(false)
 const store = useStore()
 const persistStore = usePersistStore()
 
 const { isDesktop } = useControlScreenWidth()
-
-onMounted(() => {
-  const mapInstance = map?.value
-  if (!mapInstance) return
-
-  mapInstance.on('style.load', async () => {
-    await addCog()
-    addSource(mapInstance, persistStore.featurecollection)
-    addLayer(mapInstance)
-  })
-})
 
 onBeforeUnmount(() => {
   const mapInstance = map?.value

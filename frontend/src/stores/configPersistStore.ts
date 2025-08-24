@@ -25,6 +25,13 @@ export const useConfigPersistStore = defineStore(
       missingHumusDataInterpolation.value = !missingHumusDataInterpolation.value
     }
 
+    const reset = () => {
+      outsideMeshClip.value = true
+      fiveStepsFertilization.value = true
+      humusSymbolIsVisible.value = false
+      missingHumusDataInterpolation.value = true
+    }
+
     return {
       outsideMeshClip,
       fiveStepsFertilization,
@@ -34,6 +41,7 @@ export const useConfigPersistStore = defineStore(
       fiveStepsFertilizationChanged,
       humusSymbolIsVisibleChanged,
       missingHumusDataInterpolationChanged,
+      reset,
     }
   },
   { persist: true },

@@ -11,15 +11,22 @@ import {
   point as turfPoint,
   buffer as turfBuffer,
 } from '@turf/turf'
-import Dialog from '@/components/DialogComp.vue'
+import Dialog from '@/components/common/components/Dialog.vue'
 import {
   addSource,
   addLayer,
   addVraMap,
   removeVraMap,
 } from '../create-variable-fertilization/handler/LayerHandler'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import type { VariableFertilizationMap } from '@/stores/persistStore'
+import {
+  useErrorHandler,
+  createGeneralError,
+  createNetworkError,
+  createHttpError,
+  createGeospatialError,
+} from '@/errors'
 
 const { isDesktop } = useControlScreenWidth()
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
@@ -33,6 +40,8 @@ const activeTab = ref<'realtime' | 'management'>('management')
 const isHelpDialogOpen = ref(false)
 // 全削除ダイアログの状態管理
 const isOpenDeleteAllDialog = ref<boolean>(false)
+
+const { handleError } = useErrorHandler()
 
 // 総施肥量と面積の合計を計算
 const totalFertilizerAmount = computed(() => {
@@ -55,66 +64,129 @@ const currentGridInfo = ref<{
 
 // 現在位置がVFMグリッド内にあるかチェック
 const checkCurrentPositionInGrid = () => {
-  // ポリゴンが登録されていない場合は何もしない
-  if (persistStore.featurecollection.features.length === 0) {
-    return
-  }
-
-  // 現在位置のチェック
-  if (!store.currentGeolocation.lat || !store.currentGeolocation.lng) {
-    return
-  }
-
-  let currentFeatureId = null
-  const currentPoint = turfPoint([store.currentGeolocation.lng, store.currentGeolocation.lat])
-
-  // ポリゴンが登録されている場合はポリゴン内にあるかチェック
-  // パフォーマンス最適化: バッファ計算を事前に行い、早期終了を実装
-  for (const feature of persistStore.featurecollection.features) {
-    const extendedFeature = turfBuffer(feature as Feature<Polygon>, 0.03, { units: 'kilometers' })
-    if (!extendedFeature || !feature.properties) continue
-
-    const isInside = turfBooleanPointInPolygon(currentPoint, extendedFeature)
-    if (isInside) {
-      currentFeatureId = feature.properties.id
-      // 現在位置がポリゴン内にある場合はループを抜ける
-      break
-    }
-  }
-
-  // 現在位置がポリゴン内に無ければ何もしない
-  if (!currentFeatureId) {
-    currentGridInfo.value = null
-    return
-  }
-
-  // 現在位置がポリゴン内にあれば、ポリゴンidに紐づくVFMを探す
-  const vfm = persistStore.variableFertilizationMaps.find((v) => v.id === currentFeatureId)
-  if (!vfm) {
-    currentGridInfo.value = null
-    return
-  }
-
-  // 現在位置に対応するVFMの施肥量を設定
-  // パフォーマンス最適化: ポリゴンのみを対象とし、早期終了を実装
-  for (const feature of vfm.featureCollection.features) {
-    // ポリゴン以外はスキップ
-    if (feature.geometry.type !== 'Polygon' || !feature.properties) {
-      continue
-    }
-
-    const isInside = turfBooleanPointInPolygon(currentPoint, feature as Feature<Polygon>)
-    if (isInside) {
-      currentGridInfo.value = {
-        fertilizerAmount: feature.properties.amount_fertilization_unit,
-        vfmId: vfm.id,
-      }
+  try {
+    // ポリゴンが登録されていない場合は何もしない
+    if (persistStore.featurecollection.features.length === 0) {
       return
     }
-  }
 
-  // グリッド内に見つからない場合はnullを設定
-  currentGridInfo.value = null
+    // 現在位置のバリデーション
+    const lat = store.currentGeolocation.lat
+    const lng = store.currentGeolocation.lng
+
+    if (!lat || !lng) {
+      return
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      throw new Error(`Invalid coordinates: lat=${lat}, lng=${lng}`)
+    }
+
+    let currentFeatureId = null
+    const currentPoint = turfPoint([lng, lat])
+
+    // ポリゴンが登録されている場合はポリゴン内にあるかチェック
+    // パフォーマンス最適化: バッファ計算を事前に行い、早期終了を実装
+    for (const feature of persistStore.featurecollection.features) {
+      try {
+        const extendedFeature = turfBuffer(feature as Feature<Polygon>, 0.03, {
+          units: 'kilometers',
+        })
+
+        if (!extendedFeature || !feature.properties) continue
+
+        const isInside = turfBooleanPointInPolygon(currentPoint, extendedFeature)
+        if (isInside) {
+          currentFeatureId = feature.properties.id
+          break
+        }
+      } catch (featureError) {
+        // 個別のfeature処理エラーはログのみ
+        handleError(
+          createGeospatialError(
+            'Feature processing error in position check',
+            featureError as Error,
+            {
+              featureId: feature.properties?.id,
+              operation: 'checkCurrentPositionInGrid',
+            },
+          ),
+          {
+            showUserNotification: false,
+            logToConsole: true,
+          },
+        )
+        continue
+      }
+    }
+
+    // 現在位置がポリゴン内に無ければ何もしない
+    if (!currentFeatureId) {
+      currentGridInfo.value = null
+      return
+    }
+
+    // 現在位置がポリゴン内にあれば、ポリゴンidに紐づくVFMを探す
+    const vfm = persistStore.variableFertilizationMaps.find((v) => v.id === currentFeatureId)
+    if (!vfm) {
+      currentGridInfo.value = null
+      return
+    }
+
+    // 現在位置に対応するVFMの施肥量を設定
+    // パフォーマンス最適化: ポリゴンのみを対象とし、早期終了を実装
+    for (const feature of vfm.featureCollection.features) {
+      // ポリゴン以外はスキップ
+      if (feature.geometry.type !== 'Polygon' || !feature.properties) {
+        continue
+      }
+
+      try {
+        const isInside = turfBooleanPointInPolygon(currentPoint, feature as Feature<Polygon>)
+        if (isInside) {
+          currentGridInfo.value = {
+            fertilizerAmount: feature.properties.amount_fertilization_unit,
+            vfmId: vfm.id,
+          }
+          return
+        }
+      } catch (gridError) {
+        // グリッド処理エラーをログに記録し処理を継続
+        handleError(
+          createGeospatialError(
+            'Grid processing error in fertilizer amount check',
+            gridError as Error,
+            {
+              vfmId: vfm.id,
+              featureGeometry: feature.geometry.type,
+              operation: 'checkCurrentPositionInGrid',
+            },
+          ),
+          {
+            showUserNotification: false,
+            logToConsole: true,
+          },
+        )
+        continue
+      }
+    }
+
+    // グリッド内に見つからない場合はnullを設定
+    currentGridInfo.value = null
+  } catch (error) {
+    handleError(
+      createGeospatialError('Current position grid check failed', error as Error, {
+        currentGeolocation: store.currentGeolocation,
+        featureCollectionSize: persistStore.featurecollection.features.length,
+        vfmCount: persistStore.variableFertilizationMaps.length,
+      }),
+      {
+        showUserNotification: false, // 頻繁に実行される処理のため通知なし
+        logToConsole: true,
+      },
+    )
+    currentGridInfo.value = null
+  }
 }
 
 const resetCurrentGridInfo = () => {
@@ -195,14 +267,37 @@ const deleteAllVfm = () => {
 
 const removeVfm = (id: string) => {
   const mapInstance = map?.value
-  if (!mapInstance) return
+  if (!mapInstance) {
+    handleError(
+      createGeneralError(
+        'Map instance not available',
+        '地図が初期化されていません。ページをリロードしてください。',
+        undefined,
+        new Error('Map instance is null'),
+        { operation: 'removeVfm', vfmId: id },
+      ),
+    )
+    return
+  }
 
   try {
     removeVraMap(mapInstance, id)
     persistStore.removeVariableFertilizationMap(id)
     store.setMessage('Info', '可変施肥マップを削除しました')
   } catch (error) {
-    store.setMessage('Error', '可変施肥マップの削除に失敗しました')
+    handleError(
+      createGeneralError(
+        'VFM removal failed',
+        '可変施肥マップの削除に失敗しました。地図の状態を確認してください。',
+        undefined,
+        error as Error,
+        {
+          operation: 'removeVfm',
+          vfmId: id,
+          mapInstance: !!mapInstance,
+        },
+      ),
+    )
   }
 }
 
@@ -210,9 +305,10 @@ const exportVfm = async (vfm: FeatureCollection) => {
   // 可変施肥マップの出力処理
   const url = import.meta.env.VITE_API_URL
   const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
-  store.isLoading = true
 
   try {
+    store.isLoading = true
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -223,8 +319,15 @@ const exportVfm = async (vfm: FeatureCollection) => {
     })
 
     if (!res.ok) {
-      store.alertMessage.alertType = 'Error'
-      store.alertMessage.message = 'HTTPエラー' + res.status
+      // ✅ 適切なHTTPエラーハンドリング
+      handleError(
+        createHttpError(res.status, url, 'POST', new Error(`HTTP ${res.status}: ${res.statusText}`), {
+          operation: 'vfm_export',
+          statusText: res.statusText,
+          featureCount: vfm.features.length,
+        }),
+      )
+      return
     } else {
       const json = await res.json()
       const downloadUrl = json.download_url
@@ -236,12 +339,31 @@ const exportVfm = async (vfm: FeatureCollection) => {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      store.alertMessage.alertType = 'Info'
-      store.alertMessage.message = '可変施肥マップを出力しました'
+      store.setMessage('Info', '可変施肥マップを出力しました')
     }
   } catch (error) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = 'ネットワークエラーが発生しました'
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      handleError(
+        createNetworkError('vfm_export_network', error, {
+          endpoint: url,
+          operation: 'exportVfm',
+          featureCount: vfm.features.length,
+        }),
+      )
+    } else {
+      handleError(
+        createGeneralError(
+          'VFM export failed',
+          'ファイルの出力に失敗しました。しばらく待ってから再度お試しください。',
+          undefined,
+          error as Error,
+          {
+            endpoint: url,
+            operation: 'exportVfm',
+          },
+        ),
+      )
+    }
   } finally {
     store.isLoading = false
   }
@@ -249,7 +371,18 @@ const exportVfm = async (vfm: FeatureCollection) => {
 
 const fitToVfm = (vfm: VariableFertilizationMap) => {
   const mapInstance = map?.value
-  if (!mapInstance) return
+  if (!mapInstance) {
+    handleError(
+      createGeneralError(
+        'Map instance not available',
+        '地図が初期化されていません。',
+        undefined,
+        new Error('Map instance is null'),
+        { operation: 'fitToVfm', vfmId: vfm.id },
+      ),
+    )
+    return
+  }
 
   try {
     // FeatureCollectionからbboxを計算
@@ -258,6 +391,10 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
     // bbox幅と高さを計算
     const bboxWidth = originalBbox[2] - originalBbox[0] // 経度の幅
     const bboxHeight = originalBbox[3] - originalBbox[1] // 緯度の幅
+
+    if (bboxWidth <= 0 || bboxHeight <= 0) {
+      throw new Error(`Invalid bbox dimensions: width=${bboxWidth}, height=${bboxHeight}`)
+    }
 
     // ポリゴンが画面の1/3幅になるよう、左右に1倍分ずつバッファーを追加
     // （左余白：ポリゴン：右余白 = 1:1:1 の比率）
@@ -278,8 +415,14 @@ const fitToVfm = (vfm: VariableFertilizationMap) => {
       duration: 1000, // アニメーション時間（ミリ秒）
     })
   } catch (error) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = 'マップの表示範囲の調整に失敗しました'
+    handleError(
+      createGeospatialError('Map bounds calculation failed', error as Error, {
+        operation: 'fitToVfm',
+        vfmId: vfm.id,
+        featureCount: vfm.featureCollection.features.length,
+        originalBbox: turfBbox(vfm.featureCollection),
+      }),
+    )
   }
 }
 

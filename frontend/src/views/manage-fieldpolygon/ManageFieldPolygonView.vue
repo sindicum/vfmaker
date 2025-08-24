@@ -27,7 +27,7 @@ import { useCreateLayerHandler } from './handler/useCreateLayerHandler'
 import { useRegisterFudepolyHandler } from './handler/useRegisterFudepolyHandler'
 import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
 import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
 import type { Draw, MaplibreRef } from '@/types/maplibre'
 const store = useStore()
@@ -252,13 +252,6 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
           <div class="w-full border-t border-slate-800 my-4"></div>
         </div>
       </div>
-
-      <!-- <div v-if="!isDesktop" class="flex flex-row font-semibold mx-2 my-1">
-        <div class="pb-2">圃場登録管理</div>
-        <div v-show="currentActiveName !== ''" class="">
-          <span class="mx-4">></span>{{ currentActiveName }}
-        </div>
-      </div> -->
 
       <div v-show="mapLoaded" class="">
         <div

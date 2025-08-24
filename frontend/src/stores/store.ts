@@ -22,6 +22,14 @@ export const useStore = defineStore('store', () => {
     alertMessage.value.message = message
   }
 
+  const reset = () => {
+    alertMessage.value.alertType = ''
+    alertMessage.value.message = ''
+    currentPage.value = 0
+    mapLoaded.value = false
+    mapStyleIndex.value = 0
+  }
+
   return {
     mapLoaded,
     alertMessage,
@@ -30,7 +38,6 @@ export const useStore = defineStore('store', () => {
     isLoading,
     currentGeolocation,
     setMessage,
+    reset,
   }
 })
-
-// export { usePersistStore } from './persistStore'

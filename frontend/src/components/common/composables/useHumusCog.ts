@@ -9,15 +9,15 @@ import type { GeoTIFF } from 'geotiff'
 
 export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
   const { handleError } = useErrorHandler()
-  
+
   // インスタンスごとの状態管理
   let isProtocolAdded = false
   let currentCogUrl: string | null = null
   let currentTiff: GeoTIFF | null = null
-  
+
   // インスタンスごとのPool管理
   let instancePool: Pool | null = null
-  
+
   // Pool取得関数（インスタンス内）
   const getInstancePool = (): Pool => {
     if (!instancePool) {
@@ -25,7 +25,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     }
     return instancePool
   }
-  
+
   // Pool破棄関数
   const destroyInstancePool = (): void => {
     if (instancePool) {
@@ -94,7 +94,8 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     ]
   }
 
-  const generateCogSource = async (url: string): Promise<RasterSourceSpecification | null> => {
+  const generateCogSource = (url: string): Promise<RasterSourceSpecification | null> => {
+    // const generateCogSource = async (url: string): Promise<RasterSourceSpecification | null> => {
     try {
       const cleanUrl = url.startsWith('http') ? new URL(url).host + new URL(url).pathname : url
       const source: RasterSourceSpecification = {
@@ -116,15 +117,16 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
   }
 
   const addProtocolCog = (tiff: GeoTIFF) => {
-    addProtocol('cog', async (params) => {
-      let z = 0, x = 0, y = 0
-      
+    addProtocol('cog', async ({ url }) => {
+      let z = 0,
+        x = 0,
+        y = 0
+
       try {
-        if (!params.url) throw new Error('Invalid COG URL')
+        if (!url) throw new Error('Invalid COG URL')
 
-        const segments = params.url.split('/')
+        const segments = url.split('/')
         if (segments.length < 3) throw new Error('Invalid tile request format')
-
         ;[z, x, y] = segments.slice(segments.length - 3).map((v) => parseInt(v, 10))
         if (isNaN(z) || isNaN(x) || isNaN(y)) throw new Error('Invalid tile coordinates')
 
@@ -175,13 +177,13 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
 
         const png = encode(img)
 
-        return { data: png }
+        return { data: png, contentType: 'image/png' }
       } catch (error) {
         // タイル読み込みエラーは頻発する可能性があるため、開発環境でのみログ出力
         if (import.meta.env.MODE !== 'production') {
           handleError(
             createGeospatialError('COGタイル読み込み', error as Error, {
-              url: params.url,
+              url: url,
               z: z,
               x: x,
               y: y,
@@ -193,7 +195,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
             },
           )
         }
-        return { data: new Uint8Array(4 * tileSize * tileSize) }
+        return { data: new Uint8Array(4 * tileSize * tileSize), contentType: 'image/png' }
       }
     })
   }
@@ -207,7 +209,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
           removeProtocol('cog')
           destroyInstancePool()
         }
-        
+
         // 新しいCOG URLで登録
         currentCogUrl = cogUrl
         currentTiff = await fromUrl(cogUrl)
@@ -215,7 +217,8 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
         isProtocolAdded = true
       }
 
-      const source = await generateCogSource(cogUrl)
+      const source = generateCogSource(cogUrl)
+      // const source = await generateCogSource(cogUrl)
 
       if (!source) {
         handleError(
@@ -270,13 +273,13 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     }
     // プロトコル削除前にPoolを破棄
     destroyInstancePool()
-    
+
     // プロトコルが登録されている場合のみ削除
     if (isProtocolAdded) {
       removeProtocol('cog')
       isProtocolAdded = false
     }
-    
+
     // 状態をリセット
     currentCogUrl = null
     currentTiff = null

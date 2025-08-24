@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import Dialog from '@/components/DialogComp.vue'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import Dialog from '@/components/common/components/Dialog.vue'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 

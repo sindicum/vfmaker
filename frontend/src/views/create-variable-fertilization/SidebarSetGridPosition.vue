@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
 import type { dialogType } from '@/types/maplibre'
 

@@ -4,14 +4,10 @@ import SiteDevelopmentNoteComp from './SiteDevelopmentNoteComp.vue'
 import SiteUsageNoteComp from './SiteUsageNoteComp.vue'
 import InitializeDialog from './components/InitializeDialog.vue'
 import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
-import { usePersistStore } from '@/stores/persistStore'
-import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useErrorStore } from '@/stores/errorStore'
 import { useStore } from '@/stores/store'
 
 const showResetDialog = ref(false)
-const persistStore = usePersistStore()
-const configPersistStore = useConfigPersistStore()
 const errorStore = useErrorStore()
 const store = useStore()
 
@@ -19,37 +15,13 @@ const handleResetConfirm = (confirmed: boolean) => {
   showResetDialog.value = false
 
   if (confirmed) {
-    // ストアの初期化
-    store.setMessage('', '')
-    store.mapLoaded = false
-    store.currentPage = 0
-    store.mapStyleIndex = 0
-    store.isLoading = false
-    store.currentGeolocation = {
-      lat: null,
-      lng: null,
-    }
-
-    // ローカルストレージの初期化
-    persistStore.clearFeatureCollection()
-    persistStore.deleteVariableFertilizationMaps()
-    persistStore.centerPosition = { lng: 142.5, lat: 43.5, zoom: 7 }
-
-    // 設定の初期化
-    configPersistStore.outsideMeshClip = true
-    configPersistStore.fiveStepsFertilization = true
-    configPersistStore.humusSymbolIsVisible = false
-
+    // LocalStorage全削除
+    localStorage.clear()
     // エラーストアの初期化
     errorStore.clearErrors()
 
-    // LocalStorage全削除（念のため）
-    localStorage.clear()
-
-    // 成功メッセージ表示
+    // 成功通知とリロード
     store.setMessage('Info', 'アプリケーションを初期化しました。')
-
-    // 1秒後にページをリロード（完全なリセットのため）
     setTimeout(() => {
       window.location.reload()
     }, 1000)

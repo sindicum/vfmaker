@@ -23,9 +23,10 @@ import {
 } from './handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { useErrorHandler, createValidationError, createGeospatialError } from '@/errors'
-
+import { createVfm } from './handler/services/vfmServices'
+import { addVraMap } from './handler/LayerHandler'
 import {
   intersect as turfIntersect,
   featureCollection as turfFeatureCollection,
@@ -75,10 +76,10 @@ const {
 } = useGridHandler(map)
 
 const {
-  createVfm,
   baseFertilizationAmount,
   variableFertilizationRangeRate,
   applicationGridFeatures,
+  applicationStep,
   totalArea,
   totalAmount,
 } = useVfmHandler(map)
@@ -194,15 +195,50 @@ watch(step2Status, (currentStatus, previousStatus) => {
         })
         .filter((feature): feature is Feature<Polygon, { area: number }> => feature !== null)
 
-      createVfm(
+      const { sortedFeatures, areaSum, amountSum } = createVfm(
         activeFeature.value,
         { type: 'FeatureCollection', features: intersections },
         humusPoint.value,
         fiveStepsFertilizationState,
+        applicationStep.value,
+        baseFertilizationAmount.value,
+        configPersistStore.missingHumusDataInterpolation,
       )
+      applicationGridFeatures.value = sortedFeatures
+      totalArea.value = areaSum
+      totalAmount.value = amountSum
     } else {
-      createVfm(activeFeature.value, baseMesh.value, humusPoint.value, fiveStepsFertilizationState)
+      if (!activeFeature.value) {
+        const { handleError } = useErrorHandler()
+        handleError(
+          createValidationError(
+            'baseMesh/activeFeature',
+            { activeFeature: activeFeature.value },
+            '必要なデータが不足しています',
+          ),
+          {
+            showUserNotification: true,
+            logToConsole: import.meta.env.MODE !== 'production',
+          },
+        )
+        return
+      }
+
+      const { sortedFeatures, areaSum, amountSum } = createVfm(
+        activeFeature.value,
+        baseMesh.value,
+        humusPoint.value,
+        fiveStepsFertilizationState,
+        applicationStep.value,
+        baseFertilizationAmount.value,
+        configPersistStore.missingHumusDataInterpolation,
+      )
+      applicationGridFeatures.value = sortedFeatures
+      totalArea.value = areaSum
+      totalAmount.value = amountSum
     }
+
+    addVraMap(mapInstance, { type: 'FeatureCollection', features: applicationGridFeatures.value })
 
     delayedUpdateSidebar(step3Status, 'current')
 

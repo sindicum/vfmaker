@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Dialog from '@/components/DialogComp.vue'
+import Dialog from '@/components/common/components/Dialog.vue'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 

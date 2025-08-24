@@ -4,7 +4,7 @@ import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import VfmSaveDialog from './components/VfmSaveDialog.vue'
 import { usePersistStore } from '@/stores/persistStore'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
 import type { dialogType } from '@/types/maplibre'
 import type { Feature, Polygon, GeoJsonProperties } from 'geojson'
@@ -16,6 +16,7 @@ const area = defineModel<number>('area')
 const step3Status = defineModel<string>('step3Status')
 const baseFertilizationAmount = defineModel<number>('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel<number>('variableFertilizationRangeRate')
+
 const applicationGridFeatures =
   defineModel<Feature<Polygon, GeoJsonProperties>[]>('applicationGridFeatures')
 const totalAmount = defineModel<number>('totalAmount')
@@ -87,7 +88,7 @@ const saveVfm = () => {
   <div v-if="isDesktop || step3Status === 'current'" class="grid-cols-1 grid items-center">
     <StepStatusHeader
       id="3"
-      name="施肥量の決定とファイル出力"
+      name="施肥量の決定とファイル保存"
       v-model:current-step-status="step3Status"
     />
 
@@ -134,7 +135,7 @@ const saveVfm = () => {
           type="range"
           :min="gridParams.variableFertilizationRangeRate.min"
           :max="gridParams.variableFertilizationRangeRate.max"
-          v-model="variableFertilizationRangeRate"
+          v-model.number="variableFertilizationRangeRate"
         />
       </div>
       <div

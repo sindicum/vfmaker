@@ -1,8 +1,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-export function useControlScreenWidth() {
-  const windowInnerWidth = ref(window.innerWidth)
-  const breakpoint = 1024
+export function useControlScreenWidth(breakpoint = 1024) {
+  const windowInnerWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 0)
+
   const isDesktop = computed(() => windowInnerWidth.value >= breakpoint)
 
   const updateWindowWidth = () => {
@@ -19,5 +19,6 @@ export function useControlScreenWidth() {
 
   return {
     isDesktop,
+    windowInnerWidth,
   }
 }

@@ -3,10 +3,10 @@ import { shallowRef, provide } from 'vue'
 import { RouterView } from 'vue-router'
 import { useStore } from '@/stores/store'
 
-import Header from '@/components/header/HeaderComp.vue'
-import Alert from '@/components/AlertComp.vue'
-import LoadingComp from '@/components/LoadingComp.vue'
-import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import Header from '@/components/header/Header.vue'
+import Alert from '@/components/common/components/Alert.vue'
+import Loading from '@/components/common/components/Loading.vue'
+import ErrorBoundary from '@/components/common/components/ErrorBoundary.vue'
 
 import type { MaplibreMap } from '@/types/maplibre'
 
@@ -22,6 +22,6 @@ const store = useStore()
     <Header />
     <RouterView />
     <Alert />
-    <LoadingComp v-if="store.isLoading" />
+    <Loading v-if="store.isLoading" />
   </ErrorBoundary>
 </template>

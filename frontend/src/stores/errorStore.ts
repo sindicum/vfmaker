@@ -1,4 +1,4 @@
-import type { AppError } from '@/types/error'
+import type { AppError } from '@/errors/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 

@@ -12,6 +12,7 @@ export type ApplicationGridProperties = {
   amount_fertilization_factor?: number
   amount_fertilization_unit?: number
   amount_fertilization_total?: number
+  intersects?: boolean
 }
 
 export type ApplicationGridFeature = Feature<Polygon, ApplicationGridProperties>
