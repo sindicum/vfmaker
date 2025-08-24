@@ -18,22 +18,11 @@ import {
 
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
 const { addCog } = useHumusCog(map)
-const isCogLayerVisible = ref(true)
+const isCogLayerVisible = ref(false)
 const store = useStore()
 const persistStore = usePersistStore()
 
 const { isDesktop } = useControlScreenWidth()
-
-onMounted(() => {
-  const mapInstance = map?.value
-  if (!mapInstance) return
-
-  mapInstance.on('style.load', async () => {
-    await addCog()
-    addSource(mapInstance, persistStore.featurecollection)
-    addLayer(mapInstance)
-  })
-})
 
 onBeforeMount(() => {
   const mapInstance = map?.value
