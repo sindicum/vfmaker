@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, watch, inject, ref, onBeforeMount } from 'vue'
-
 import MapBase from '@/components/map/MapBase.vue'
 import HumusMapLegend from '@/components/map/HumusMapLegend.vue'
 import { useHumusCog } from '@/composables/useHumusCog'
@@ -24,6 +23,16 @@ const persistStore = usePersistStore()
 
 const { isDesktop } = useControlScreenWidth()
 
+onMounted(() => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  mapInstance.on('style.load', () => {
+    addSource(mapInstance, persistStore.featurecollection)
+    addLayer(mapInstance)
+  })
+})
+
 onBeforeMount(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
@@ -41,9 +50,9 @@ watch(
     mapInstance.once('idle', async () => {
       if (isCogLayerVisible.value) {
         await addCog()
-        addSource(mapInstance, persistStore.featurecollection)
-        addLayer(mapInstance)
       }
+      addSource(mapInstance, persistStore.featurecollection)
+      addLayer(mapInstance)
     })
   },
 )
