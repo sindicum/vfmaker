@@ -6,8 +6,9 @@ import VfmSaveDialog from './components/VfmSaveDialog.vue'
 import { usePersistStore } from '@/stores/persistStore'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
-import type { dialogType } from '@/types/maplibre'
+import type { dialogType } from '@/types/common'
 import type { Feature, Polygon, GeoJsonProperties } from 'geojson'
+import type { VariableFertilizationMap } from '@/types/create-variable-fertilization'
 
 const currentDialogName = ref<dialogType>('')
 const persistStore = usePersistStore()
@@ -31,6 +32,8 @@ const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
   variableFertilizationRangeRate: { min: 1, max: 99 },
 }
+
+const vfmMemo = ref('')
 
 // ボタン入力ダイアログを表示
 const onClickDialog = (dialogName: dialogType) => {
@@ -56,31 +59,28 @@ watch([isOverwriteSave], () => {
 
 // 保存処理を実行
 const executeSave = () => {
-  persistStore.addVariableFertilizationMap(
-    applicationGridFeatures.value ?? [],
-    activeFeatureId.value ?? '',
-    Math.round(totalAmount.value ?? 0),
-    Math.round(area.value ?? 0) / 100,
-  )
-
-  // Step1に戻る
-  step3Status.value = 'complete'
-}
-
-// 可変施肥マップの保存
-const saveVfm = () => {
-  // 同一IDが存在するかチェック
-  const existingVfm = persistStore.variableFertilizationMaps.find(
-    (v) => v.id === activeFeatureId.value,
-  )
-
-  // 同一IDのマップが存在する場合はダイアログを表示
-  if (existingVfm) {
-    isOpenVfmSaveDialog.value = true
-    return
+  const vfms: VariableFertilizationMap = {
+    vfm: {
+      type: 'FeatureCollection',
+      features: applicationGridFeatures.value ?? [],
+    },
+    id: activeFeatureId.value ?? '',
+    created_at: new Date().toISOString(),
+    amount_10a: Math.round(baseFertilizationAmount.value ?? 0),
+    total_amount: Math.round(totalAmount.value ?? 0),
+    area: Math.round(area.value ?? 0) / 100,
+    fertilization_range: variableFertilizationRangeRate.value ?? 0,
+    memo: vfmMemo.value,
   }
-  // 同一IDのマップがない場合は保存処理を実行
-  executeSave()
+
+  // フィーチャコレクションの中からactiveFeatureId.valueに一致するフィーチャに対して、properties.vfmsの配列にvfmを追加
+  const isSuccess: 'success' | 'error' = persistStore.addVfm(activeFeatureId.value ?? '', vfms)
+
+  if (isSuccess === 'success') {
+    // Step1に戻る
+    step3Status.value = 'complete'
+    vfmMemo.value = ''
+  }
 }
 </script>
 
@@ -98,7 +98,7 @@ const saveVfm = () => {
         'px-5 transition-all duration-500',
       ]"
     >
-      <div class="text-rose-600 my-4">基準施肥量および可変量を入力</div>
+      <div class="text-rose-600 my-3">基準施肥量および可変量を入力</div>
 
       <div
         :class="[
@@ -137,18 +137,34 @@ const saveVfm = () => {
           :max="gridParams.variableFertilizationRangeRate.max"
           v-model.number="variableFertilizationRangeRate"
         />
+        <label>メモ</label>
+        <input
+          v-model="vfmMemo"
+          :class="[
+            isDesktop ? 'col-span-2' : 'col-span-3',
+            'border rounded-md bg-white hover:bg-gray-50 px-2',
+          ]"
+          placeholder="任意"
+          maxlength="64"
+        />
       </div>
       <div
         :class="[
-          isDesktop ? 'grid-cols-2 gap-3 ' : 'grid-cols-4',
-          'grid my-3 items-center font-bold text-sky-600',
+          isDesktop
+            ? 'grid-cols-[7fr_2fr_4fr] col-span-1 gap-y-3'
+            : 'grid-cols-4 col-span-2 gap-y-2',
+          'grid items-center bg-amber-50 rounded-lg border border-amber-200 mt-3 p-2',
         ]"
       >
-        <label>合計施肥量</label>
-        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round(totalAmount ?? 0) }} kg</div>
+        <label class="text-amber-800">合計施肥量</label>
+        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
+          {{ Math.round(totalAmount ?? 0) }} kg
+        </div>
 
-        <label>概算面積</label>
-        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round((area ?? 0) / 100) }} a</div>
+        <label class="text-amber-800">概算面積</label>
+        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
+          {{ Math.round((area ?? 0) / 100) }} a
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-3 justify-center my-4">
         <button
@@ -159,7 +175,7 @@ const saveVfm = () => {
         </button>
         <button
           class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
-          @click="saveVfm"
+          @click="executeSave"
         >
           <span>保存</span>
         </button>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import InputMemoDialog from './components/InputMemoDialog.vue'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import { addEditLayer, FILL_LAYER_NAME } from './handler/LayerHandler'
+import { ref, computed } from 'vue'
 
-import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/maplibre'
+import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/common'
 import type { Feature, Polygon } from 'geojson'
 
 const persistStore = usePersistStore()
@@ -13,38 +15,30 @@ const map = defineModel<MaplibreMap>('map')
 const draw = defineModel<Draw>('draw')
 const updatePolygonId = defineModel<string>('updatePolygonId')
 const updatePolygonActive = defineModel<boolean>('updatePolygonActive')
+const isOpenDialog = defineModel<boolean>('isOpenDialog')
+
+const filteringResult = computed(() => {
+  const filteredFeatureIndex: number = persistStore.featurecollection.features.findIndex(
+    (el) => el.properties.id === updatePolygonId.value,
+  )
+  const defaultMemo =
+    persistStore.featurecollection.features[filteredFeatureIndex].properties.memo || ''
+  return { filteredFeatureIndex, defaultMemo }
+})
+
+const updateFeatureMemo = ref<string>('')
 
 // 更新実行
 function updateRegisteredPolygon() {
   const mapInstance = map?.value
   if (!mapInstance) return
-
   const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
 
   if (updatePolygonId.value !== '' && !hasLayer) {
-    const mapInstance = map?.value
-    if (!mapInstance) return
+    updateFeatureMemo.value = filteringResult.value.defaultMemo
 
-    const filteredFeatureIndex: number = persistStore.featurecollection.features.findIndex(
-      (el) => el.properties.id === updatePolygonId.value,
-    )
-    const snapshot = draw.value?.getSnapshot()
-    if (!snapshot || snapshot.length === 0) return
-    const feature = snapshot[0] as Feature<Polygon>
-    persistStore.featurecollection.features[filteredFeatureIndex].geometry = feature.geometry
-
-    draw.value?.clear()
-
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    } else {
-      console.error('ソースが見つかりません')
-    }
-
-    addEditLayer(mapInstance)
-    store.setMessage('Info', 'ポリゴンを更新しました')
-    updatePolygonId.value = ''
+    // ダイアログを開き、handleSelectedを発火
+    isOpenDialog.value = true
   }
 
   if (updatePolygonId.value !== '' && hasLayer) {
@@ -56,7 +50,6 @@ function updateRegisteredPolygon() {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
   }
 }
-
 // 選択クリア
 function updateClearEditLayer() {
   const mapInstance = map?.value
@@ -81,10 +74,40 @@ function updateClearEditLayer() {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
   }
 }
-
 // 編集モード終了
 function updateExitEdit() {
   updatePolygonActive.value = false
+}
+
+// InputMemoDialogのYes/No処理
+const handleSelected = (isSelect: boolean) => {
+  if (updatePolygonId.value !== '' && isSelect) {
+    const mapInstance = map?.value
+    if (!mapInstance) return
+
+    const snapshot = draw.value?.getSnapshot()
+    if (!snapshot || snapshot.length === 0) return
+    const feature = snapshot[0] as Feature<Polygon>
+    persistStore.featurecollection.features[filteringResult.value.filteredFeatureIndex].geometry =
+      feature.geometry
+    persistStore.featurecollection.features[
+      filteringResult.value.filteredFeatureIndex
+    ].properties.memo = updateFeatureMemo.value
+
+    draw.value?.clear()
+
+    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
+    if (source) {
+      source.setData(persistStore.featurecollection)
+    } else {
+      console.error('ソースが見つかりません')
+    }
+    addEditLayer(mapInstance)
+    store.setMessage('Info', 'ポリゴンを更新しました')
+    updatePolygonId.value = ''
+    // }
+  }
+  isOpenDialog.value = false
 }
 </script>
 
@@ -115,4 +138,11 @@ function updateExitEdit() {
       編集モード終了
     </button>
   </div>
+
+  <InputMemoDialog
+    message="ポリゴンを登録しますか"
+    :isOpen="isOpenDialog!"
+    v-model:memo="updateFeatureMemo"
+    @selected="handleSelected"
+  />
 </template>

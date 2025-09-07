@@ -21,9 +21,9 @@ import {
   transformRotate as turfTransformRotate,
 } from '@turf/turf'
 
-import { addHumusGrid, addBaseMesh, addHumusRaster } from './LayerHandler'
+import { addHumusGrid, addBaseMesh, addHumusRaster } from '../../common/handler/LayerHandler'
 
-import type { MapMouseEvent, GeoJSONSource, MaplibreRef } from '@/types/maplibre'
+import type { MapMouseEvent, GeoJSONSource, MaplibreRef } from '@/types/common'
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import type { ReadRasterResult } from 'geotiff'
 import type { AreaPolygon, BaseGrid, HumusPoints } from '@/types/geom'
@@ -368,18 +368,19 @@ export function useGridHandler(map: MaplibreRef) {
       return cogSource
     } catch (error) {
       // エラーの詳細情報を収集
+      const isError = error instanceof Error
       const errorDetails = {
         userAgent: navigator.userAgent,
         cogUrl: url,
         bbox: bbox3857,
-        errorType: (error as Error).constructor.name,
-        errorMessage: (error as Error).message,
+        errorType: isError ? error.constructor.name : typeof error,
+        errorMessage: isError ? error.message : String(error),
         aggregateErrors:
-          error instanceof AggregateError
-            ? error.errors.map((e) => ({
-                type: e.constructor.name,
-                message: e.message,
-                stack: e.stack,
+          isError && 'errors' in error && Array.isArray(error.errors)
+            ? error.errors.map((e: Error) => ({
+                type: e?.constructor?.name || 'Unknown',
+                message: e?.message || 'No message',
+                stack: e?.stack || 'No stack trace',
               }))
             : undefined,
         timestamp: new Date().toISOString(),
@@ -387,8 +388,8 @@ export function useGridHandler(map: MaplibreRef) {
 
       // エラーハンドラーを使用してユーザーに通知
       const appError = createGeospatialError(
-        `COGデータ読み込み: ${(error as Error).message}`,
-        error as Error,
+        `COGデータ読み込み: ${isError ? error.message : String(error)}`,
+        isError ? error : new Error(String(error)),
         errorDetails,
       )
       handleError(appError)
@@ -404,9 +405,10 @@ export function useGridHandler(map: MaplibreRef) {
         return cogSource
       } catch (retryError) {
         // リトライも失敗した場合
+        const isRetryError = retryError instanceof Error
         const retryAppError = createGeospatialError(
-          `COGデータ読み込み再試行失敗: ${(retryError as Error).message}`,
-          retryError as Error,
+          `COGデータ読み込み再試行失敗: ${isRetryError ? retryError.message : String(retryError)}`,
+          isRetryError ? retryError : new Error(String(retryError)),
           { ...errorDetails, retry: true },
         )
         handleError(retryAppError)

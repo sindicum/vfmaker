@@ -3,12 +3,12 @@ import { shallowRef, provide } from 'vue'
 import { RouterView } from 'vue-router'
 import { useStore } from '@/stores/store'
 
-import Header from '@/components/header/Header.vue'
+import Header from '@/components/header/AppHeader.vue'
 import Alert from '@/components/common/components/Alert.vue'
 import Loading from '@/components/common/components/Loading.vue'
 import ErrorBoundary from '@/components/common/components/ErrorBoundary.vue'
 
-import type { MaplibreMap } from '@/types/maplibre'
+import type { MaplibreMap } from '@/types/common'
 
 // MaplibreMapオブジェクトを下位コンポーネントに注入（DI）する
 const map = shallowRef<MaplibreMap>(null)

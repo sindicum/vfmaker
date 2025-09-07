@@ -9,7 +9,7 @@ import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { Protocol as PMTilesProtocol } from 'pmtiles'
 
 import type { FeatureCollection } from 'geojson'
-import type { MaplibreMap } from '@/types/maplibre'
+import type { MaplibreMap } from '@/types/common'
 import type { ShallowRef } from 'vue'
 
 export const SOURCE_NAME = 'registeredFields'

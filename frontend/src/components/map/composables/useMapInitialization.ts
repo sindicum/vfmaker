@@ -2,7 +2,7 @@ import { Map as MaplibreMapObject } from 'maplibre-gl'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import { useErrorHandler, createNetworkError, createGeneralError } from '@/errors'
-import type { MaplibreRef } from '@/types/maplibre'
+import type { MaplibreRef } from '@/types/common'
 
 interface MapStyleProperty {
   name: string

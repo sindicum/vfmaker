@@ -4,7 +4,7 @@ import { Pool, fromUrl } from 'geotiff'
 import { useErrorHandler, createGeospatialError } from '@/errors'
 
 import type { ShallowRef } from 'vue'
-import type { MaplibreMap, RasterSourceSpecification } from '@/types/maplibre'
+import type { MaplibreMap, RasterSourceSpecification } from '@/types/common'
 import type { GeoTIFF } from 'geotiff'
 
 export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {

@@ -20,13 +20,13 @@ import {
   removeVraMap,
   addHumusRaster,
   removeHumusRaster,
-} from './handler/LayerHandler'
+} from '../common/handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { useErrorHandler, createValidationError, createGeospatialError } from '@/errors'
 import { createVfm } from './handler/services/vfmServices'
-import { addVraMap } from './handler/LayerHandler'
+import { addVraMap } from '../common/handler/LayerHandler'
 import {
   intersect as turfIntersect,
   featureCollection as turfFeatureCollection,
@@ -36,7 +36,7 @@ import {
 import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
 import VfmConfigComp from './components/VfmConfigComp.vue'
 
-import type { MapMouseEvent, MaplibreRef } from '@/types/maplibre'
+import type { MapMouseEvent, MaplibreRef } from '@/types/common'
 import type { Feature, Polygon } from 'geojson'
 import type { AreaPolygon } from '@/types/geom'
 type StepStatus = 'upcoming' | 'current' | 'complete'
@@ -88,13 +88,13 @@ onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  if (mapInstance) {
-    mapInstance.on('style.load', () => {
-      addSource(mapInstance, persistStore.featurecollection)
-      addLayer(mapInstance)
-      mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
-    })
-  }
+  // if (mapInstance) {
+  mapInstance.on('style.load', () => {
+    addSource(mapInstance, persistStore.featurecollection)
+    addLayer(mapInstance)
+    mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
+  })
+  // }
 })
 
 onBeforeUnmount(() => {

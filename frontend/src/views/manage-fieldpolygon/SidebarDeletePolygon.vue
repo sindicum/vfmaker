@@ -5,7 +5,7 @@ import { useControlScreenWidth } from '@/components/common/composables/useContro
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 
-import type { MaplibreMap, GeoJSONSource } from '@/types/maplibre'
+import type { MaplibreMap, GeoJSONSource } from '@/types/common'
 
 const store = useStore()
 const persistStore = usePersistStore()

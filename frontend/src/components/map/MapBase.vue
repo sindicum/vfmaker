@@ -9,7 +9,7 @@ import { useNetworkStatus } from '@/components/common/composables/useNetworkStat
 import { useErrorHandler, createNetworkError } from '@/errors'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { MaplibreRef } from '@/types/maplibre'
+import type { MaplibreRef } from '@/types/common'
 
 const store = useStore()
 const persistStore = usePersistStore()
@@ -77,6 +77,7 @@ watch(
     }
   },
 )
+
 onUnmounted(() => {
   cleanupMap()
 })

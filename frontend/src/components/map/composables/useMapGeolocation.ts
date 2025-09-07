@@ -8,7 +8,7 @@ import {
   createPermissionError,
   createGeneralError,
 } from '@/errors'
-import type { MaplibreRef } from '@/types/maplibre'
+import type { MaplibreRef } from '@/types/common'
 
 interface UseMapGeolocationOptions {
   map: MaplibreRef
@@ -52,9 +52,14 @@ export function useMapGeolocation({ map }: UseMapGeolocationOptions) {
       store.currentGeolocation = { lat: latitude, lng: longitude }
     })
 
+    geolocateControl.on('trackuserlocationstart', () => {
+      store.isTracking = true
+    })
+
     geolocateControl.on('trackuserlocationend', () => {
       // 追跡が終了した場合に緯度経度をリセット
       store.currentGeolocation = { lat: null, lng: null }
+      store.isTracking = false
     })
 
     geolocateControl.on('error', (error) => {
@@ -101,13 +106,14 @@ export function useMapGeolocation({ map }: UseMapGeolocationOptions) {
   }
 
   function setupMapControls() {
-    const geolocateControl = createGeolocateControl()
+    const control = createGeolocateControl()
+    store.geolocateControl = control
 
     map.value!.addControl(new ScaleControl())
     map.value!.addControl(new NavigationControl(), isDesktop.value ? 'top-right' : 'bottom-left')
-    map.value!.addControl(geolocateControl, isDesktop.value ? 'top-right' : 'bottom-left')
+    map.value!.addControl(control, isDesktop.value ? 'top-right' : 'bottom-left')
 
-    setupGeolocateEventListeners(geolocateControl)
+    setupGeolocateEventListeners(control)
   }
 
   return {

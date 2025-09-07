@@ -1,5 +1,6 @@
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
+import type { GeolocateControl } from 'maplibre-gl'
 
 type alertType = 'Error' | 'Info' | ''
 
@@ -16,6 +17,8 @@ export const useStore = defineStore('store', () => {
     lat: null,
     lng: null,
   })
+  const geolocateControl = shallowRef<GeolocateControl | null>(null)
+  const isTracking = ref<boolean | null>(null)
 
   const setMessage = (alertType: alertType, message: string) => {
     alertMessage.value.alertType = alertType
@@ -37,6 +40,8 @@ export const useStore = defineStore('store', () => {
     mapStyleIndex,
     isLoading,
     currentGeolocation,
+    geolocateControl,
+    isTracking,
     setMessage,
     reset,
   }

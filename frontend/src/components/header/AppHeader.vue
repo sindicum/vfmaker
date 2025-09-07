@@ -14,10 +14,10 @@ const navigation: {
   href: string
   name: string
 }[] = [
-  { href: '/', name: '腐植マップ' },
+  { href: '/', name: '腐植マップ閲覧' },
   { href: '/manage-fieldpolygon', name: '圃場ポリゴン管理' },
-  { href: '/create-vfm', name: '可変施肥マップ作成' },
-  { href: '/manage-vfm', name: '表示・出力・管理' },
+  { href: '/create-vfm', name: 'VFマップ作成' },
+  { href: '/manage-vfm', name: 'VFマップ表示・出力' },
   { href: '/about', name: '本サイトについて' },
 ]
 </script>
@@ -25,7 +25,7 @@ const navigation: {
 <template>
   <header class="fixed top-0 flex items-center justify-between w-screen h-16 bg-slate-800 z-10">
     <div class="ml-4 lg:ml-10 text-2xl text-amber-300 tracking-wide">
-      VFMaker <span class="text-xl">（開発環境）</span>
+      VFMaker <span class="text-xl">（評価版）</span>
     </div>
     <HamburgerButton v-model:is-open-menu="isOpenMenu" />
     <nav

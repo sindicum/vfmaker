@@ -5,7 +5,7 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import type { FeatureCollection } from 'geojson'
-import type { MaplibreRef } from '@/types/maplibre'
+import type { MaplibreRef } from '@/types/common'
 import type { ApplicationGridFeatures } from '@/types/geom'
 
 import { updateVrf } from './services/vfmServices'

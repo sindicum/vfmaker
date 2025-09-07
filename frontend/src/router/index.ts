@@ -36,7 +36,7 @@ const router = createRouter({
     {
       path: '/error-log',
       name: 'ErrorLog',
-      component: () => import('@/views/error/ErrorLog.vue'),
+      component: () => import('@/views/common/error/ErrorLog.vue'),
       meta: { title: 'エラーログ' },
     },
     {

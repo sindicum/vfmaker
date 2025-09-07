@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { dialogType } from '@/types/maplibre'
+import type { dialogType } from '@/types/common'
 
 const gridParams = {
   rotationAngle: { min: 0, max: 90 },

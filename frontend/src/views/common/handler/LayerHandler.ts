@@ -1,7 +1,12 @@
-import type { MaplibreMap } from '@/types/maplibre'
 import type { FeatureCollection } from 'geojson'
+import type { Map as MaplibreMap } from 'maplibre-gl'
+// import type { VariableFertilizationMap } from '@/types/create-variable-fertilization'
 
 export function addSource(map: MaplibreMap, featureCollection: FeatureCollection) {
+  if (map?.getSource('registeredFields')) {
+    return
+  }
+
   map?.addSource('registeredFields', {
     type: 'geojson',
     data: featureCollection,
@@ -16,6 +21,10 @@ export function removeSource(map: MaplibreMap) {
 }
 
 export function addLayer(map: MaplibreMap) {
+  if (map?.getLayer('registeredFillLayer')) {
+    return
+  }
+
   map?.addLayer({
     id: 'registeredFillLayer',
     type: 'fill',
@@ -180,6 +189,7 @@ export function removeBaseMesh(map: MaplibreMap) {
 
 export function addVraMap(
   map: MaplibreMap,
+  // humusMeanFeatureCollection: VariableFertilizationMap,
   humusMeanFeatureCollection: FeatureCollection,
   id: string = 'default',
 ) {

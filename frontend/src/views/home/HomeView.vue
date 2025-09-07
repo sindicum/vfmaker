@@ -6,14 +6,9 @@ import { useHumusCog } from '@/components/common/composables/useHumusCog'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import type { ShallowRef } from 'vue'
-import type { MaplibreMap } from '@/types/maplibre'
+import type { MaplibreMap } from '@/types/common'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
-import {
-  addLayer,
-  addSource,
-  removeLayer,
-  removeSource,
-} from '../create-variable-fertilization/handler/LayerHandler'
+import { addLayer, addSource, removeLayer, removeSource } from '../common/handler/LayerHandler'
 
 const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
 const { addCog, removeCog } = useHumusCog(map)
@@ -27,7 +22,7 @@ onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  mapInstance.on('style.load', async () => {
+  mapInstance.on('style.load', () => {
     addSource(mapInstance, persistStore.featurecollection)
     addLayer(mapInstance)
   })
@@ -60,7 +55,7 @@ watch(
 
 watch(isCogLayerVisible, async () => {
   const mapInstance = map?.value
-  if (!mapInstance) return
+  if (!mapInstance || !mapInstance.loaded()) return
 
   if (isCogLayerVisible.value) {
     await addCog()

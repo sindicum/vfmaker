@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { DrawRef } from '@/types/maplibre'
+import type { DrawRef } from '@/types/common'
 
 export function useCreateLayerHandler(draw: DrawRef) {
   const isOpenDialog = ref(false)

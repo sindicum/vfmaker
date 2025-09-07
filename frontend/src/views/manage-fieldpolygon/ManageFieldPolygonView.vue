@@ -29,7 +29,7 @@ import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
 import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
-import type { Draw, MaplibreRef } from '@/types/maplibre'
+import type { Draw, MaplibreRef } from '@/types/common'
 const store = useStore()
 const persistStore = usePersistStore()
 const { isDesktop } = useControlScreenWidth()

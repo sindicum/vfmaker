@@ -10,7 +10,7 @@ import {
   COORDINATE_PRECISION,
 } from './LayerHandler'
 
-import type { DrawRef, MaplibreRef, MapMouseEvent } from '@/types/maplibre'
+import type { DrawRef, MaplibreRef, MapMouseEvent } from '@/types/common'
 import type { Feature, Polygon } from 'geojson'
 
 export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
@@ -34,6 +34,7 @@ export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
     const drawInstance = draw?.value
     if (!drawInstance) return
     if (!e.features) return
+    if (!e.features[0].properties) return
 
     const clickedPolygonUuid = e.features[0].properties.polygon_uuid
 

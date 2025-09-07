@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { MaplibreRef, MapMouseEvent } from '@/types/maplibre'
+import type { MaplibreRef, MapMouseEvent } from '@/types/common'
 
 import { SOURCE_NAME, FILL_LAYER_NAME } from './LayerHandler'
 

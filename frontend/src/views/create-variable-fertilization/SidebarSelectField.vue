@@ -16,7 +16,7 @@ const { isDesktop } = useControlScreenWidth()
         'px-5 transition-all duration-500',
       ]"
     >
-      <div class="text-rose-600 my-4">地図から圃場を選択</div>
+      <div class="text-rose-600 my-3">地図から圃場を選択</div>
     </div>
   </div>
 </template>
