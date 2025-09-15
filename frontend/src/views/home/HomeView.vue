@@ -1,29 +1,46 @@
 <script setup lang="ts">
-import { watch, inject, ref, onBeforeUnmount, onMounted } from 'vue'
-import MapBase from '@/components/map/MapBase.vue'
+import { watch, inject, ref, onBeforeUnmount, onMounted, onBeforeMount } from 'vue'
 
+import MapBase from '@/components/map/MapBase.vue'
+// import NoticeDialog from './components/NoticeDialog.vue'
 import { useHumusCog } from '@/components/common/composables/useHumusCog'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
-import type { ShallowRef } from 'vue'
-import type { MaplibreMap } from '@/types/common'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { addLayer, addSource, removeLayer, removeSource } from '../common/handler/LayerHandler'
 
-const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useStore } from '@/stores/store'
+
+import type { ShallowRef } from 'vue'
+import type { MapLibreMap } from '@/types/map.type'
+import type { FieldPolygonFeatureCollection } from '@/types/fieldpolygon.type'
+
+const map = inject<ShallowRef<MapLibreMap | null>>('mapkey')
 const { addCog, removeCog } = useHumusCog(map)
 const isCogLayerVisible = ref(false)
 const store = useStore()
-const persistStore = usePersistStore()
 
 const { isDesktop } = useControlScreenWidth()
+const { readAllFields } = useStoreHandler()
+// const isDialogOpen = ref(true)
+
+const baseFeatureCollection: FieldPolygonFeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
+}
+const fieldPolygonFeatureCollection = ref(baseFeatureCollection)
+const isLoadIndexedDB = ref(false)
+
+onBeforeMount(async () => {
+  fieldPolygonFeatureCollection.value = await readAllFields()
+  isLoadIndexedDB.value = true
+})
 
 onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
   mapInstance.on('style.load', () => {
-    addSource(mapInstance, persistStore.featurecollection)
+    addSource(mapInstance, fieldPolygonFeatureCollection.value)
     addLayer(mapInstance)
   })
 })
@@ -35,6 +52,9 @@ onBeforeUnmount(() => {
   removeLayer(mapInstance)
   removeSource(mapInstance)
   removeCog()
+
+  isLoadIndexedDB.value = false
+  fieldPolygonFeatureCollection.value = { type: 'FeatureCollection', features: [] }
 })
 
 watch(
@@ -42,12 +62,13 @@ watch(
   () => {
     const mapInstance = map?.value
     if (!mapInstance) return
+    if (!isLoadIndexedDB.value) return
 
     mapInstance.once('idle', async () => {
       if (isCogLayerVisible.value) {
         await addCog()
       }
-      addSource(mapInstance, persistStore.featurecollection)
+      addSource(mapInstance, fieldPolygonFeatureCollection.value)
       addLayer(mapInstance)
     })
   },
@@ -108,5 +129,6 @@ watch(isCogLayerVisible, async () => {
         <div class="ml-1">150mg/kg</div>
       </div>
     </div>
+    <!-- <NoticeDialog v-model:is-dialog-open="isDialogOpen" /> -->
   </main>
 </template>

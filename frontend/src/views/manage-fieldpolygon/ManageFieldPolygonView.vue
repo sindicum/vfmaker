@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { inject, onMounted, watch, ref, shallowRef, computed, onBeforeUnmount } from 'vue'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
-
+import {
+  inject,
+  onMounted,
+  onBeforeMount,
+  watch,
+  ref,
+  shallowRef,
+  computed,
+  onBeforeUnmount,
+} from 'vue'
 import MapBase from '@/components/map/MapBase.vue'
 import SidebarCreatePolygon from './SidebarCreatePolygon.vue'
 import SidebarRegisterFudepoly from './SidebarRegisterFudepoly.vue'
 import SidebarUpdatePolygon from './SidebarUpdatePolygon.vue'
 import SidebarDeletePolygon from './SidebarDeletePolygon.vue'
 import FileImportDialog from './components/FileImportDialog.vue'
-
 import {
   addSource,
   addLayer,
@@ -28,16 +33,19 @@ import { useRegisterFudepolyHandler } from './handler/useRegisterFudepolyHandler
 import { useUpdateLayerHandler } from './handler/useUpdateLayerHandler'
 import { useDeleteLayerHandler } from './handler/useDeleteLayerHandler'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
+import { getGeoJSONSource } from '@/views/common/composables/useMapSoruce'
 
-import type { Draw, MaplibreRef } from '@/types/common'
-const store = useStore()
-const persistStore = usePersistStore()
-const { isDesktop } = useControlScreenWidth()
+import { useStore } from '@/stores/store'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
-const map = inject<MaplibreRef>('mapkey')
+import type { MapLibreMapRef, Draw } from '@/types/map.type'
+import type { FeatureCollection } from 'geojson'
+
+const map = inject<MapLibreMapRef>('mapkey')
 if (!map) throw new Error('Map instance not provided')
 const draw = shallowRef<Draw>(null)
 
+const store = useStore()
 const mapLoaded = ref(false)
 const createPolygonActive = ref(false)
 const registerFudepolyActive = ref(false)
@@ -53,18 +61,30 @@ const currentActiveName = computed(() => {
   return ''
 })
 
+const { isDesktop } = useControlScreenWidth()
 const { isOpenDialog, drawOnFinish, drawOffFinish } = useCreateLayerHandler(draw)
-
 const { onClickRegisterFudepolyLayer, offClickRegisterFudepolyLayer } = useRegisterFudepolyHandler(
   map,
   draw,
 )
-
 const { updatePolygonId, onClickUpdateLayer, offClickUpdateLayer } = useUpdateLayerHandler(
   map,
   draw,
 )
 const { deletePolygonId, onClickDeleteLayer, offClickDeleteLayer } = useDeleteLayerHandler(map)
+const { readAllFields } = useStoreHandler()
+
+const baseFeatureCollection: FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
+}
+const fieldPolygonFeatureCollection = ref(baseFeatureCollection)
+const isLoadIndexedDB = ref(false)
+
+onBeforeMount(async () => {
+  fieldPolygonFeatureCollection.value = await readAllFields()
+  isLoadIndexedDB.value = true
+})
 
 onMounted(() => {
   const mapInstance = map?.value
@@ -94,13 +114,16 @@ onBeforeUnmount(() => {
   registerFudepolyActive.value = false
   updatePolygonActive.value = false
   deletePolygonActive.value = false
+
+  isLoadIndexedDB.value = false
+  fieldPolygonFeatureCollection.value = { type: 'FeatureCollection', features: [] }
 })
 
-function mapOnLoad() {
+async function mapOnLoad() {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  addSource(mapInstance, persistStore.featurecollection)
+  addSource(mapInstance, fieldPolygonFeatureCollection.value)
   addLayer(mapInstance)
   draw.value = setupTerraDraw(map)
   draw.value.start()
@@ -115,11 +138,12 @@ watch(
     if (!mapInstance) return
     const drawInstance = draw?.value
     if (!drawInstance) return
+    if (!isLoadIndexedDB.value) return
 
     drawInstance.clear()
 
-    mapInstance.once('idle', () => {
-      addSource(mapInstance, persistStore.featurecollection)
+    mapInstance.once('idle', async () => {
+      addSource(mapInstance, fieldPolygonFeatureCollection.value)
 
       const topMenu =
         !createPolygonActive.value &&
@@ -219,14 +243,20 @@ watch(deletePolygonActive, (isActive) => {
   }
 })
 
+watch(fieldPolygonFeatureCollection, () => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  if (!isLoadIndexedDB.value || !mapLoaded.value) return
+
+  const source = getGeoJSONSource(mapInstance, 'registeredFields')
+  if (!source) return
+  source.setData(fieldPolygonFeatureCollection.value)
+})
+
 const onClickCreatePolygonBtn = () => (createPolygonActive.value = true)
-
 const onClickRegisterFudepolyBtn = () => (registerFudepolyActive.value = true)
-
 const onClickRegisterFileBtn = () => (isOpenFileImportDialog.value = true)
-
 const onClickUpdatePolygonBtn = () => (updatePolygonActive.value = true)
-
 const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
 </script>
 
@@ -310,6 +340,7 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
           v-model:draw="draw"
           v-model:create-polygon-active="createPolygonActive"
           v-model:is-open-dialog="isOpenDialog"
+          v-model:field-polygon-feature-collection="fieldPolygonFeatureCollection"
         />
 
         <!-- 筆ポリゴンからの登録 -->
@@ -318,6 +349,7 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
           v-model:map="map"
           v-model:draw="draw"
           v-model:register-fudepoly-active="registerFudepolyActive"
+          v-model:field-polygon-feature-collection="fieldPolygonFeatureCollection"
         />
 
         <!-- ポリゴンの更新 -->
@@ -327,6 +359,7 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
           v-model:draw="draw"
           v-model:update-polygon-id="updatePolygonId"
           v-model:update-polygon-active="updatePolygonActive"
+          v-model:field-polygon-feature-collection="fieldPolygonFeatureCollection"
         />
 
         <!-- ポリゴンの削除 -->
@@ -335,6 +368,7 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
           v-model:map="map"
           v-model:delete-polygon-id="deletePolygonId"
           v-model:delete-polygon-active="deletePolygonActive"
+          v-model:field-polygon-feature-collection="fieldPolygonFeatureCollection"
         />
       </div>
     </div>
@@ -344,6 +378,7 @@ const onClickDeletePolygonBtn = () => (deletePolygonActive.value = true)
     <FileImportDialog
       v-if="isOpenFileImportDialog"
       v-model:is-open-dialog="isOpenFileImportDialog"
+      v-model:field-polygon-feature-collection="fieldPolygonFeatureCollection"
     />
   </main>
 </template>

@@ -1,55 +1,55 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+
 import Dialog from '@/components/common/components/Dialog.vue'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
 
-import type { MaplibreMap, GeoJSONSource } from '@/types/common'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useStore } from '@/stores/store'
+
+import type { MapLibreMap } from '@/types/map.type'
+import type { FeatureCollection } from 'geojson'
 
 const store = useStore()
-const persistStore = usePersistStore()
 
-const map = defineModel<MaplibreMap>('map')
-const deletePolygonId = defineModel<string>('deletePolygonId')
+const map = defineModel<MapLibreMap>('map')
+const deletePolygonId = defineModel<number | null>('deletePolygonId')
 const deletePolygonActive = defineModel<boolean>('deletePolygonActive')
+const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
+  'fieldPolygonFeatureCollection',
+)
+
 const isOpenDialog = ref<boolean>(false)
 
 const { isDesktop } = useControlScreenWidth()
+const { readAllFields, deleteField, deleteAllFields, allFieldsCount } = useStoreHandler()
 
 // 選択したポリゴンの削除
-function deleteRegisteredPolygon() {
-  if (deletePolygonId.value !== '') {
-    const mapInstance = map?.value
-    if (!mapInstance) return
-
-    const filteredFeatures = persistStore.featurecollection.features.filter((el) => {
-      return el.properties.id !== deletePolygonId.value
-    })
-    persistStore.featurecollection.features = filteredFeatures
-
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    } else {
-      store.setMessage('Error', 'ソースが見つかりません')
-    }
-    store.setMessage('Info', 'ポリゴンを削除しました')
-    persistStore.removeVariableFertilizationMap(deletePolygonId.value!)
-  } else {
+async function deleteRegisteredPolygon() {
+  if (deletePolygonId.value === null || deletePolygonId.value === undefined) {
     store.setMessage('Error', 'ポリゴンを選択してください')
+    return
   }
-  deletePolygonId.value = ''
-}
-
-// ポリゴンの全削除
-function deleteAllPolygon() {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  const featuresLength = persistStore.featurecollection.features.length
+  await deleteField(deletePolygonId.value)
+  store.setMessage('Info', 'ポリゴンを削除しました')
 
-  if (featuresLength === 0) {
+  fieldPolygonFeatureCollection.value = await readAllFields()
+
+  deletePolygonId.value = null
+}
+
+// ポリゴンの全削除
+async function deleteAllPolygon() {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  // 非同期でフィールド数を取得して変数に格納
+  const fieldsCount = await allFieldsCount()
+
+  if (fieldsCount === 0) {
     store.setMessage('Error', 'ポリゴンがありません')
     return
   }
@@ -62,22 +62,17 @@ function deleteExitEdit() {
   deletePolygonActive.value = false
 }
 
-const selectedDialog = (selected: boolean) => {
+const selectedDialog = async (selected: boolean) => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
   if (selected) {
     // ポリゴンを全削除
-    persistStore.clearFeatureCollection()
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    }
+    await deleteAllFields()
+    fieldPolygonFeatureCollection.value = await readAllFields()
+
     store.alertMessage.alertType = 'Info'
     store.alertMessage.message = `ポリゴンをすべて削除しました`
-
-    // 作成した可変施肥マップを削除
-    persistStore.deleteVariableFertilizationMaps()
   }
 
   isOpenDialog.value = false

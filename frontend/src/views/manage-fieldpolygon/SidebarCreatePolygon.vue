@@ -1,53 +1,54 @@
 <script setup lang="ts">
-import InputMemoDialog from './components/InputMemoDialog.vue'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
 import { ref } from 'vue'
-import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/common'
-import type { Feature, Polygon } from 'geojson'
 
-const store = useStore()
-const persistStore = usePersistStore()
+import InputMemoDialog from './components/InputMemoDialog.vue'
+import { usePolygonFeature } from './composables/usePolygonFeature'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
-const createPolygonActive = defineModel<boolean>('createPolygonActive')
-const map = defineModel<MaplibreMap>('map')
+import type { Draw, MapLibreMap } from '@/types/map.type'
+import type { FeatureCollection } from 'geojson'
+
+const map = defineModel<MapLibreMap>('map')
 const draw = defineModel<Draw>('draw')
+const createPolygonActive = defineModel<boolean>('createPolygonActive')
 const isOpenDialog = defineModel<boolean>('isOpenDialog')
+const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
+  'fieldPolygonFeatureCollection',
+)
+
 const memo = ref('')
+
+const { getPolygonFromSnapshot, createFieldFromPolygon } = usePolygonFeature()
+const { createField, readAllFields } = useStoreHandler()
 
 const exitCreatePolygon = () => {
   createPolygonActive.value = false
 }
 
 // 「ポリゴンの新規作成」ダイアログのYes/No処理
-const handleSelected = (isSelect: boolean) => {
+const handleSelected = async (isSelect: boolean) => {
   const mapInstance = map?.value
   if (!mapInstance) return
   const drawInstance = draw?.value
   if (!drawInstance) return
 
-  if (isSelect) {
-    const snapshot = draw.value?.getSnapshot()
-    if (!snapshot || snapshot.length === 0) return
-    const feature = snapshot[0] as Feature<Polygon>
-
-    isOpenDialog.value = false
-    persistStore.addFeature(feature, memo.value)
-    drawInstance.clear()
-
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    } else {
-      store.setMessage('Error', 'ソースが見つかりません')
-    }
-  }
-
   if (!isSelect) {
     drawInstance.clear()
     drawInstance.setMode('polygon')
     isOpenDialog.value = false
+    return
   }
+
+  const snapshot = draw.value?.getSnapshot()
+  const feature = getPolygonFromSnapshot(snapshot)
+  if (!feature) return
+  const field = createFieldFromPolygon(feature, memo.value)
+
+  await createField(field)
+  isOpenDialog.value = false
+  drawInstance.clear()
+
+  fieldPolygonFeatureCollection.value = await readAllFields()
 }
 </script>
 

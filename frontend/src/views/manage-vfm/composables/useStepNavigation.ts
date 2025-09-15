@@ -21,7 +21,7 @@ export interface StepNavigationCallbacks {
 
 export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
   const currentStep = ref(1)
-  const activeFeatureId = ref<string | null>(null)
+  const activeFeatureUuid = ref<string | null>(null)
   const activeVfmIndex = ref<number | null>(null)
 
   const buttonConfig = computed(() => {
@@ -30,8 +30,8 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
         return {
           backLabel: '選択クリア',
           forwardLabel: '進む',
-          backDisabled: activeFeatureId.value === null,
-          forwardDisabled: activeFeatureId.value === null,
+          backDisabled: activeFeatureUuid.value === null,
+          forwardDisabled: activeFeatureUuid.value === null,
         }
       case 2:
         return {
@@ -59,7 +59,7 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
 
   // 進むの可否判定
   const canGoForward = computed(() => {
-    if (currentStep.value === 1) return activeFeatureId.value !== null
+    if (currentStep.value === 1) return activeFeatureUuid.value !== null
     if (currentStep.value === 2) return activeVfmIndex.value !== null
     return true
   })
@@ -132,7 +132,7 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
   // 初期状態に戻る
   const reset = () => {
     currentStep.value = 1
-    activeFeatureId.value = null
+    activeFeatureUuid.value = null
     activeVfmIndex.value = null
   }
 
@@ -140,7 +140,7 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
     // State
     buttonConfig,
     currentStep: readonly(currentStep),
-    activeFeatureId,
+    activeFeatureUuid,
     activeVfmIndex,
 
     // Computed

@@ -9,7 +9,7 @@ import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { Protocol as PMTilesProtocol } from 'pmtiles'
 
 import type { FeatureCollection } from 'geojson'
-import type { MaplibreMap } from '@/types/common'
+import type { MapLibreMap } from '@/types/map.type'
 import type { ShallowRef } from 'vue'
 
 export const SOURCE_NAME = 'registeredFields'
@@ -25,7 +25,7 @@ export const PMTILES = {
 }
 export const COORDINATE_PRECISION = 9
 
-export function addSource(map: MaplibreMap, featureCollection: FeatureCollection) {
+export function addSource(map: MapLibreMap, featureCollection: FeatureCollection) {
   map?.addSource(SOURCE_NAME, {
     type: 'geojson',
     data: featureCollection,
@@ -33,7 +33,7 @@ export function addSource(map: MaplibreMap, featureCollection: FeatureCollection
   })
 }
 
-export function addLayer(map: MaplibreMap) {
+export function addLayer(map: MapLibreMap) {
   map?.addLayer({
     id: REGISTERED_LAYER_NAME,
     type: 'fill',
@@ -45,19 +45,19 @@ export function addLayer(map: MaplibreMap) {
   })
 }
 
-export function removeLayer(map: MaplibreMap | null | undefined) {
+export function removeLayer(map: MapLibreMap | null | undefined) {
   if (map?.getLayer(REGISTERED_LAYER_NAME)) {
     map.removeLayer(REGISTERED_LAYER_NAME)
   }
 }
 
-export function removeSource(map: MaplibreMap) {
+export function removeSource(map: MapLibreMap) {
   if (map?.getSource(SOURCE_NAME)) {
     map.removeSource(SOURCE_NAME)
   }
 }
 
-export function addEditLayer(map: MaplibreMap) {
+export function addEditLayer(map: MapLibreMap) {
   map?.addLayer({
     id: LINE_LAYER_NAME,
     type: 'line',
@@ -78,7 +78,7 @@ export function addEditLayer(map: MaplibreMap) {
   })
 }
 
-export function removeEditLayer(map: MaplibreMap) {
+export function removeEditLayer(map: MapLibreMap) {
   if (map?.getLayer(FILL_LAYER_NAME)) {
     map.removeLayer(FILL_LAYER_NAME)
   }
@@ -87,7 +87,7 @@ export function removeEditLayer(map: MaplibreMap) {
   }
 }
 
-export function addPMTilesSource(map: MaplibreMap) {
+export function addPMTilesSource(map: MapLibreMap) {
   removePMTitlesSource(map)
 
   const protocol = new PMTilesProtocol()
@@ -101,7 +101,7 @@ export function addPMTilesSource(map: MaplibreMap) {
   })
 }
 
-export function addPMTilesLayer(map: MaplibreMap) {
+export function addPMTilesLayer(map: MapLibreMap) {
   removePMTitlesLayer(map)
 
   map?.addLayer(
@@ -133,14 +133,14 @@ export function addPMTilesLayer(map: MaplibreMap) {
   )
 }
 
-export function removePMTitlesSource(map: MaplibreMap) {
+export function removePMTitlesSource(map: MapLibreMap) {
   if (map?.getSource(PMTILES.sourceId)) {
     map?.removeSource(PMTILES.sourceId)
   }
   removeProtocol('pmtiles')
 }
 
-export function removePMTitlesLayer(map: MaplibreMap) {
+export function removePMTitlesLayer(map: MapLibreMap) {
   if (map?.getLayer(PMTILES.lineLayerId)) {
     map?.removeLayer(PMTILES.lineLayerId)
   }
@@ -150,7 +150,7 @@ export function removePMTitlesLayer(map: MaplibreMap) {
   }
 }
 
-export function setupTerraDraw(map: ShallowRef<MaplibreMap | null>) {
+export function setupTerraDraw(map: ShallowRef<MapLibreMap | null>) {
   const draw = new TerraDraw({
     tracked: true,
     adapter: new TerraDrawMapLibreGLAdapter({

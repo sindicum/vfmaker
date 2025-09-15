@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import InputMemoDialog from './components/InputMemoDialog.vue'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
 import { ref } from 'vue'
-
+import InputMemoDialog from './components/InputMemoDialog.vue'
+import { usePolygonFeature } from './composables/usePolygonFeature'
 import {
   addPMTilesSource,
   addPMTilesLayer,
@@ -11,16 +9,25 @@ import {
   removePMTitlesLayer,
 } from './handler/LayerHandler'
 
-import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/common'
-import type { Feature, Polygon } from 'geojson'
+import { useStore } from '@/stores/store'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+
+import type { MapLibreMap, Draw } from '@/types/map.type'
+import type { DrawFeature } from '@/types/fieldpolygon.type'
+import type { FeatureCollection } from 'geojson'
 
 const store = useStore()
-const persistStore = usePersistStore()
-
-const map = defineModel<MaplibreMap>('map')
+const map = defineModel<MapLibreMap>('map')
 const draw = defineModel<Draw>('draw')
 const registerFudepolyActive = defineModel<boolean>('registerFudepolyActive')
 const isOpenDialog = defineModel<boolean>('isOpenDialog')
+const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
+  'fieldPolygonFeatureCollection',
+)
+
+const { createField, readAllFields } = useStoreHandler()
+const { getPolygonFromSnapshot, createFieldFromPolygon } = usePolygonFeature()
+
 const memo = ref('')
 
 const MESSAGE = {
@@ -28,6 +35,7 @@ const MESSAGE = {
   SOURCE_NOT_FOUND: 'ソースが見つかりません',
   MAP_NOT_READY: '地図インスタンスが初期化されていません',
   DRAW_NOT_READY: 'Drawインスタンスが初期化されていません',
+  NOPOLYGON_CREATED: 'ポリゴンが作成されていません',
 }
 
 // 登録実行
@@ -61,36 +69,57 @@ function exitFudepolyEdit() {
 }
 
 // Draw描画オブジェクトを取得
-function getDrawFeature(): Feature<Polygon> | null {
+function getDrawFeature(): DrawFeature | null {
   const snapshot = draw.value?.getSnapshot()
-  if (!snapshot || snapshot.length === 0) {
+
+  if (!snapshot) {
     store.setMessage('Error', MESSAGE.NOT_SELECTED)
     return null
   }
-  return snapshot[0] as Feature<Polygon>
+
+  if (snapshot.length === 0) {
+    store.setMessage('Error', MESSAGE.NOT_SELECTED)
+    return null
+  }
+
+  const type = snapshot[0].geometry.type
+  if (type !== 'Polygon') {
+    store.setMessage('Error', MESSAGE.NOPOLYGON_CREATED)
+    return null
+  }
+
+  return snapshot[0] as DrawFeature
 }
 
 // InputMemoDialogのYes/No処理
-const handleSelected = (isSelect: boolean) => {
+const handleSelected = async (isSelect: boolean) => {
+  if (!isSelect) {
+    isOpenDialog.value = false
+    memo.value = ''
+    return
+  }
+
   const mapInstance = map?.value
   if (!mapInstance) return
-  const feature = getDrawFeature()
+
+  const snapshot = draw.value?.getSnapshot()
+  const feature = getPolygonFromSnapshot(snapshot)
   if (!feature) return
+  const field = createFieldFromPolygon(feature, memo.value)
 
-  if (isSelect) {
-    persistStore.addFeature(feature, memo.value)
-    draw.value?.clear()
-    addPMTilesSource(mapInstance)
-    addPMTilesLayer(mapInstance)
+  await createField(field).catch((error) => {
+    console.error('ポリゴンの登録に失敗しました:', error)
+    store.setMessage('Error', 'ポリゴンの登録に失敗しました')
+  })
 
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    } else {
-      store.setMessage('Error', MESSAGE.SOURCE_NOT_FOUND)
-    }
-  }
+  draw.value?.clear()
+  addPMTilesSource(mapInstance)
+  addPMTilesLayer(mapInstance)
+
+  fieldPolygonFeatureCollection.value = await readAllFields()
+
   isOpenDialog.value = false
+  memo.value = ''
 }
 </script>
 

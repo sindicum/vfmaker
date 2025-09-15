@@ -6,10 +6,12 @@ import InitializeDialog from './components/InitializeDialog.vue'
 import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
 import { useErrorStore } from '@/stores/errorStore'
 import { useStore } from '@/stores/store'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
 const showResetDialog = ref(false)
 const errorStore = useErrorStore()
 const store = useStore()
+const { deleteAllFields } = useStoreHandler()
 
 const handleResetConfirm = (confirmed: boolean) => {
   showResetDialog.value = false
@@ -19,6 +21,9 @@ const handleResetConfirm = (confirmed: boolean) => {
     localStorage.clear()
     // エラーストアの初期化
     errorStore.clearErrors()
+
+    // indexedDBの全削除
+    deleteAllFields()
 
     // 成功通知とリロード
     store.setMessage('Info', 'アプリケーションを初期化しました。')

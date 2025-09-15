@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
-import { useConfigPersistStore } from '@/stores/configPersistStore'
+import { inject, onMounted, onBeforeUnmount, ref, watch, onBeforeMount } from 'vue'
 
 import MapBase from '@/components/map/MapBase.vue'
+import VfmConfigComp from './components/VfmConfigComp.vue'
 import selectField from './SidebarSelectField.vue'
 import setGridPosition from './SidebarSetGridPosition.vue'
 import exportVfm from './SidebarExportVfm.vue'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import {
   addSource,
   removeSource,
@@ -15,38 +14,43 @@ import {
   removeLayer,
   addHumusGrid,
   removeHumusGrid,
-  addBaseMesh,
-  removeBaseMesh,
+  addBaseGrid,
+  removeBaseGrid,
   removeVraMap,
   addHumusRaster,
   removeHumusRaster,
 } from '../common/handler/LayerHandler'
 import { useGridHandler } from './handler/useGridHandler'
 import { useVfmHandler } from './handler/useVfmHandler'
-import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
-import { useErrorHandler, createValidationError, createGeospatialError } from '@/errors'
-import { createVfm } from './handler/services/vfmServices'
 import { addVraMap } from '../common/handler/LayerHandler'
+import { createVfm } from './handler/services/vfmServices'
+import { useErrorHandler, createValidationError, createGeospatialError } from '@/errors'
+
 import {
   intersect as turfIntersect,
   featureCollection as turfFeatureCollection,
   area as turfArea,
 } from '@turf/turf'
-
 import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
-import VfmConfigComp from './components/VfmConfigComp.vue'
 
-import type { MapMouseEvent, MaplibreRef } from '@/types/common'
+import { useStore } from '@/stores/store'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+
+import type { MapLibreMapRef } from '@/types/map.type'
 import type { Feature, Polygon } from 'geojson'
-import type { AreaPolygon } from '@/types/geom'
+import type { BaseGridFeature } from '@/types/vfm.type'
+import type { FieldPolygonFeatureCollection } from '@/types/fieldpolygon.type'
+import type { MapMouseEvent } from 'maplibre-gl'
+
 type StepStatus = 'upcoming' | 'current' | 'complete'
 
-const map = inject<MaplibreRef>('mapkey')
+const map = inject<MapLibreMapRef>('mapkey')
 if (!map) throw new Error('Map instance not provided')
 
 const store = useStore()
-const persistStore = usePersistStore()
 const configPersistStore = useConfigPersistStore()
+const { readAllFields } = useStoreHandler()
 
 const { isDesktop } = useControlScreenWidth()
 
@@ -60,7 +64,7 @@ const isOpenConfig = ref(false)
 // グリッド編集状態
 const isInEdit = ref(false)
 
-const activeFeatureId = ref<string>('')
+const activeFeatureId = ref<number | null>(null)
 
 const {
   activeFeature,
@@ -68,7 +72,7 @@ const {
   gridEW,
   gridNS,
   buffer,
-  baseMesh,
+  baseGrid,
   humusPoint,
   humusRaster,
   humusRasterBbox,
@@ -78,23 +82,33 @@ const {
 const {
   baseFertilizationAmount,
   variableFertilizationRangeRate,
-  applicationGridFeatures,
   applicationStep,
   totalArea,
   totalAmount,
+  vfmapFeatures,
 } = useVfmHandler(map)
+
+const baseFeatureCollection: FieldPolygonFeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
+}
+const fieldPolygonFeatureCollection = ref(baseFeatureCollection)
+const isLoadIndexedDB = ref(false)
+
+onBeforeMount(async () => {
+  fieldPolygonFeatureCollection.value = await readAllFields()
+  isLoadIndexedDB.value = true
+})
 
 onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  // if (mapInstance) {
-  mapInstance.on('style.load', () => {
-    addSource(mapInstance, persistStore.featurecollection)
+  mapInstance.on('style.load', async () => {
+    addSource(mapInstance, fieldPolygonFeatureCollection.value)
     addLayer(mapInstance)
     mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
   })
-  // }
 })
 
 onBeforeUnmount(() => {
@@ -105,7 +119,7 @@ onBeforeUnmount(() => {
   removeSource(mapInstance)
   removeHumusGrid(mapInstance)
   removeHumusRaster(mapInstance)
-  removeBaseMesh(mapInstance)
+  removeBaseGrid(mapInstance)
   removeVraMap(mapInstance)
 
   mapInstance.off('click', 'registeredFillLayer', mapClickHandler)
@@ -113,7 +127,10 @@ onBeforeUnmount(() => {
   step1Status.value = 'current'
   step2Status.value = 'upcoming'
   step3Status.value = 'upcoming'
-  activeFeatureId.value = ''
+  activeFeatureId.value = null
+
+  isLoadIndexedDB.value = false
+  fieldPolygonFeatureCollection.value = { type: 'FeatureCollection', features: [] }
 })
 
 watch(step1Status, (currentStatus, previousStatus) => {
@@ -125,7 +142,7 @@ watch(step1Status, (currentStatus, previousStatus) => {
     // バッファーの初期化（グリッド幅はユーザー設定を生かす）
     buffer.value = 0
     isInEdit.value = false
-    activeFeatureId.value = ''
+    activeFeatureId.value = null
   }
 })
 
@@ -137,116 +154,88 @@ watch(step2Status, (currentStatus, previousStatus) => {
 
   // Step2 -> Step3
   if (previousStatus === 'current' && currentStatus == 'complete') {
-    if (configPersistStore.outsideMeshClip) {
-      if (!baseMesh.value?.features || !activeFeature.value) {
-        const { handleError } = useErrorHandler()
-        handleError(
-          createValidationError(
-            'baseMesh/activeFeature',
-            { baseMesh: baseMesh.value, activeFeature: activeFeature.value },
-            '必要なデータが不足しています',
-          ),
-          {
-            showUserNotification: true,
-            logToConsole: import.meta.env.MODE !== 'production',
-          },
-        )
-        return
-      }
-
-      const intersections: AreaPolygon[] = baseMesh.value.features
-        .map((meshFeature: AreaPolygon): AreaPolygon | null => {
-          try {
-            const intersection = turfIntersect(
-              turfFeatureCollection([
-                meshFeature as Feature<Polygon>,
-                activeFeature.value! as Feature<Polygon>,
-              ]),
-            )
-
-            if (!intersection || intersection.geometry.type !== 'Polygon') {
-              return null
-            }
-
-            const area = turfArea(intersection)
-            const result: Feature<Polygon, { area: number }> = {
-              type: 'Feature',
-              geometry: intersection.geometry as Polygon,
-              properties: {
-                area,
-              },
-            }
-
-            return result
-          } catch (error) {
-            const { handleError } = useErrorHandler()
-            handleError(
-              createGeospatialError('ポリゴン交差計算', error as Error, {
-                meshFeatureIndex: baseMesh.value.features.indexOf(meshFeature),
-                activeFeatureId: activeFeature.value?.properties?.id,
-              }),
-              {
-                showUserNotification: false,
-                logToConsole: import.meta.env.MODE !== 'production',
-              },
-            )
-            return null
-          }
-        })
-        .filter((feature): feature is Feature<Polygon, { area: number }> => feature !== null)
-
-      const { sortedFeatures, areaSum, amountSum } = createVfm(
-        activeFeature.value,
-        { type: 'FeatureCollection', features: intersections },
-        humusPoint.value,
-        fiveStepsFertilizationState,
-        applicationStep.value,
-        baseFertilizationAmount.value,
-        configPersistStore.missingHumusDataInterpolation,
+    // 必要なデータが不足している場合は早期リターン
+    if (!activeFeature.value || !baseGrid.value) {
+      const { handleError } = useErrorHandler()
+      handleError(
+        createValidationError(
+          'baseMesh/activeFeature',
+          { baseMesh: baseGrid.value, activeFeature: activeFeature.value },
+          '必要なデータが不足しています',
+        ),
+        {
+          showUserNotification: true,
+          logToConsole: import.meta.env.MODE !== 'production',
+        },
       )
-      applicationGridFeatures.value = sortedFeatures
-      totalArea.value = areaSum
-      totalAmount.value = amountSum
-    } else {
-      if (!activeFeature.value) {
-        const { handleError } = useErrorHandler()
-        handleError(
-          createValidationError(
-            'baseMesh/activeFeature',
-            { activeFeature: activeFeature.value },
-            '必要なデータが不足しています',
-          ),
-          {
-            showUserNotification: true,
-            logToConsole: import.meta.env.MODE !== 'production',
-          },
-        )
-        return
-      }
-
-      const { sortedFeatures, areaSum, amountSum } = createVfm(
-        activeFeature.value,
-        baseMesh.value,
-        humusPoint.value,
-        fiveStepsFertilizationState,
-        applicationStep.value,
-        baseFertilizationAmount.value,
-        configPersistStore.missingHumusDataInterpolation,
-      )
-      applicationGridFeatures.value = sortedFeatures
-      totalArea.value = areaSum
-      totalAmount.value = amountSum
+      return
     }
 
-    addVraMap(mapInstance, { type: 'FeatureCollection', features: applicationGridFeatures.value })
+    let vfmBaseGrid = baseGrid.value
+
+    // VFMを圃場ポリゴンでクリップする場合の処理
+    if (configPersistStore.outsideMeshClip) {
+      const intersectionsFeatures = baseGrid.value.features.flatMap((f: BaseGridFeature) => {
+        try {
+          if (!f || !activeFeature.value) return []
+
+          // TODO:Web Workerでの並列処理を今後実装する
+          // 圃場ポリゴンとグリッドポリゴンが交差する部分を抽出
+          const intersection = turfIntersect(
+            turfFeatureCollection([f as Feature<Polygon>, activeFeature.value as Feature<Polygon>]),
+          )
+          if (!intersection || intersection.geometry.type !== 'Polygon') {
+            return []
+          }
+          const area = turfArea(intersection)
+          const result: Feature<Polygon, { area: number }> = {
+            type: 'Feature',
+            geometry: intersection.geometry,
+            properties: {
+              area: area,
+            },
+          }
+
+          return [result]
+        } catch (error) {
+          const { handleError } = useErrorHandler()
+          handleError(
+            createGeospatialError('ポリゴン交差計算', error as Error, {
+              meshFeatureIndex: baseGrid.value?.features.indexOf(f),
+              activeFeatureId: activeFeature.value?.properties?.id,
+            }),
+            {
+              showUserNotification: false,
+              logToConsole: import.meta.env.MODE !== 'production',
+            },
+          )
+          return []
+        }
+      })
+      // vfmBaseGridを更新
+      vfmBaseGrid = { type: 'FeatureCollection', features: intersectionsFeatures }
+    }
+
+    const { features, areaSum, amountSum } = createVfm(
+      activeFeature.value,
+      vfmBaseGrid,
+      humusPoint.value,
+      fiveStepsFertilizationState,
+      applicationStep.value,
+      baseFertilizationAmount.value,
+      configPersistStore.missingHumusDataInterpolation,
+    )
+    vfmapFeatures.value = features
+    totalArea.value = areaSum
+    totalAmount.value = amountSum
+
+    addVraMap(mapInstance, { type: 'FeatureCollection', features: vfmapFeatures.value })
 
     delayedUpdateSidebar(step3Status, 'current')
 
-    if (mapInstance) {
-      removeHumusGrid(mapInstance)
-      removeHumusRaster(mapInstance)
-      removeBaseMesh(mapInstance)
-    }
+    removeHumusGrid(mapInstance)
+    removeHumusRaster(mapInstance)
+    removeBaseGrid(mapInstance)
   }
 
   // Step2 -> Step1
@@ -256,7 +245,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
     if (mapInstance) {
       removeHumusGrid(mapInstance)
       removeHumusRaster(mapInstance)
-      removeBaseMesh(mapInstance)
+      removeBaseGrid(mapInstance)
     }
   }
 })
@@ -273,7 +262,7 @@ watch(step3Status, (currentStatus, previousStatus) => {
 
     if (mapInstance) {
       removeHumusGrid(mapInstance)
-      removeBaseMesh(mapInstance)
+      removeBaseGrid(mapInstance)
       removeVraMap(mapInstance)
     }
   }
@@ -292,7 +281,9 @@ watch(step3Status, (currentStatus, previousStatus) => {
       if (configPersistStore.humusSymbolIsVisible) {
         addHumusGrid(mapInstance, humusPoint.value)
       }
-      addBaseMesh(mapInstance, baseMesh.value)
+
+      if (!baseGrid.value) return
+      addBaseGrid(mapInstance, baseGrid.value)
     }
     delayedUpdateSidebar(step2Status, 'current')
   }
@@ -302,20 +293,20 @@ watch(step3Status, (currentStatus, previousStatus) => {
 watch(
   () => store.mapStyleIndex,
   () => {
-    const currentMap = map?.value
+    const mapInstance = map?.value
+    if (!mapInstance) return
 
-    if (currentMap) {
-      currentMap.once('idle', () => {
-        addSource(currentMap, persistStore.featurecollection)
-        addLayer(currentMap)
+    mapInstance.once('idle', async () => {
+      addSource(mapInstance, fieldPolygonFeatureCollection.value)
+      addLayer(mapInstance)
 
-        // サイドバーの設定を初期化
-        step3Status.value = 'upcoming'
-        step2Status.value = 'upcoming'
-        step1Status.value = 'current'
-        activeFeatureId.value = ''
-      })
-    }
+      // サイドバーの設定を初期化
+      step3Status.value = 'upcoming'
+      step2Status.value = 'upcoming'
+      step1Status.value = 'current'
+      activeFeatureId.value = null
+    })
+    // }
   },
 )
 
@@ -333,6 +324,7 @@ watch(
 )
 /**
  * マップクリックによりonClickField()を呼び出す
+ * 型はMapMouseEventを採用（MapLibreMouseEventだとtype errorが発生するため）
  * @param e マップクリックイベント
  */
 async function mapClickHandler(e: MapMouseEvent) {
@@ -343,7 +335,7 @@ async function mapClickHandler(e: MapMouseEvent) {
     store.setMessage('Error', error)
   })
   step1Status.value = 'complete'
-  activeFeatureId.value = activeFeature.value?.properties.id ?? ''
+  activeFeatureId.value = activeFeature.value?.properties.id ?? null
 }
 
 /**
@@ -413,10 +405,10 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:step3-status="step3Status"
             v-model:base-fertilization-amount="baseFertilizationAmount"
             v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
-            v-model:application-grid-features="applicationGridFeatures"
+            v-model:vfmap-features="vfmapFeatures"
             v-model:total-amount="totalAmount"
             v-model:area="totalArea"
-            v-model:active-feature-id="activeFeatureId"
+            v-model:active-feature="activeFeature"
           />
         </li>
       </ol>

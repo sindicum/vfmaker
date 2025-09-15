@@ -1,55 +1,55 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import InputMemoDialog from './components/InputMemoDialog.vue'
-import { useStore } from '@/stores/store'
-import { usePersistStore } from '@/stores/persistStore'
+import { usePolygonFeature } from './composables/usePolygonFeature'
 import { addEditLayer, FILL_LAYER_NAME } from './handler/LayerHandler'
-import { ref, computed } from 'vue'
 
-import type { Draw, MaplibreMap, GeoJSONSource } from '@/types/common'
-import type { Feature, Polygon } from 'geojson'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useStore } from '@/stores/store'
 
-const persistStore = usePersistStore()
+import type { MapLibreMap, Draw } from '@/types/map.type'
+import type { FeatureCollection } from 'geojson'
+
 const store = useStore()
+const { readAllFields, readField, updateField } = useStoreHandler()
+const { getPolygonFromSnapshot, createUpdateField } = usePolygonFeature()
 
-const map = defineModel<MaplibreMap>('map')
+const map = defineModel<MapLibreMap>('map')
 const draw = defineModel<Draw>('draw')
-const updatePolygonId = defineModel<string>('updatePolygonId')
+const updatePolygonId = defineModel<number | null>('updatePolygonId')
 const updatePolygonActive = defineModel<boolean>('updatePolygonActive')
 const isOpenDialog = defineModel<boolean>('isOpenDialog')
+const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
+  'fieldPolygonFeatureCollection',
+)
 
-const filteringResult = computed(() => {
-  const filteredFeatureIndex: number = persistStore.featurecollection.features.findIndex(
-    (el) => el.properties.id === updatePolygonId.value,
-  )
-  const defaultMemo =
-    persistStore.featurecollection.features[filteredFeatureIndex].properties.memo || ''
-  return { filteredFeatureIndex, defaultMemo }
-})
+const memo = ref<string>('')
 
-const updateFeatureMemo = ref<string>('')
-
-// 更新実行
-function updateRegisteredPolygon() {
+// クリックしたポリゴンにメモをセットして更新実行
+async function updateRegisteredPolygon() {
   const mapInstance = map?.value
   if (!mapInstance) return
+
   const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
-
-  if (updatePolygonId.value !== '' && !hasLayer) {
-    updateFeatureMemo.value = filteringResult.value.defaultMemo
-
-    // ダイアログを開き、handleSelectedを発火
-    isOpenDialog.value = true
-  }
-
-  if (updatePolygonId.value !== '' && hasLayer) {
+  if (hasLayer) {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
-    updatePolygonId.value = ''
+    return
+  }
+  if (!updatePolygonId.value) {
+    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    return
   }
 
-  if (updatePolygonId.value === '' && hasLayer) {
+  const f = await readField(updatePolygonId.value)
+  if (!f) {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    return
   }
+  memo.value = f.properties.memo
+  // ダイアログを開き、handleSelectedを発火
+  isOpenDialog.value = true
 }
+
 // 選択クリア
 function updateClearEditLayer() {
   const mapInstance = map?.value
@@ -58,55 +58,51 @@ function updateClearEditLayer() {
   if (!drawInstance) return
 
   const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
-
-  if (updatePolygonId.value !== '' && !hasLayer) {
-    drawInstance.clear()
-    addEditLayer(mapInstance)
-    updatePolygonId.value = ''
-  }
-
-  if (updatePolygonId.value !== '' && hasLayer) {
+  if (hasLayer) {
     store.setMessage('Error', '筆ポリゴンを選択して下さい')
-    updatePolygonId.value = ''
+    return
   }
+  if (updatePolygonId.value === null) return
 
-  if (updatePolygonId.value === '' && hasLayer) {
-    store.setMessage('Error', '筆ポリゴンを選択して下さい')
-  }
+  drawInstance.clear()
+  addEditLayer(mapInstance)
+  updatePolygonId.value = null
 }
+
 // 編集モード終了
 function updateExitEdit() {
   updatePolygonActive.value = false
 }
 
 // InputMemoDialogのYes/No処理
-const handleSelected = (isSelect: boolean) => {
-  if (updatePolygonId.value !== '' && isSelect) {
-    const mapInstance = map?.value
-    if (!mapInstance) return
-
-    const snapshot = draw.value?.getSnapshot()
-    if (!snapshot || snapshot.length === 0) return
-    const feature = snapshot[0] as Feature<Polygon>
-    persistStore.featurecollection.features[filteringResult.value.filteredFeatureIndex].geometry =
-      feature.geometry
-    persistStore.featurecollection.features[
-      filteringResult.value.filteredFeatureIndex
-    ].properties.memo = updateFeatureMemo.value
-
-    draw.value?.clear()
-
-    const source = mapInstance.getSource('registeredFields') as GeoJSONSource
-    if (source) {
-      source.setData(persistStore.featurecollection)
-    } else {
-      console.error('ソースが見つかりません')
-    }
-    addEditLayer(mapInstance)
-    store.setMessage('Info', 'ポリゴンを更新しました')
-    updatePolygonId.value = ''
-    // }
+const handleSelected = async (isSelect: boolean) => {
+  if (!isSelect) {
+    updateClearEditLayer()
+    isOpenDialog.value = false
+    return
   }
+  if (updatePolygonId.value === null || updatePolygonId.value === undefined) return
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  const snapshot = draw.value?.getSnapshot()
+  const feature = getPolygonFromSnapshot(snapshot)
+  if (!feature) return
+
+  const field = createUpdateField(feature, memo.value)
+
+  await updateField(updatePolygonId.value, field).catch((error) => {
+    console.error('ポリゴンの更新に失敗しました:', error)
+    store.setMessage('Error', 'ポリゴンの更新に失敗しました')
+  })
+
+  draw.value?.clear()
+
+  fieldPolygonFeatureCollection.value = await readAllFields()
+
+  addEditLayer(mapInstance)
+  store.setMessage('Info', 'ポリゴンを更新しました')
+  updatePolygonId.value = null
   isOpenDialog.value = false
 }
 </script>
@@ -142,7 +138,7 @@ const handleSelected = (isSelect: boolean) => {
   <InputMemoDialog
     message="ポリゴンを登録しますか"
     :isOpen="isOpenDialog!"
-    v-model:memo="updateFeatureMemo"
+    v-model:memo="memo"
     @selected="handleSelected"
   />
 </template>

@@ -1,10 +1,12 @@
 import { ref } from 'vue'
-import type { MaplibreRef, MapMouseEvent } from '@/types/common'
 
 import { SOURCE_NAME, FILL_LAYER_NAME } from './LayerHandler'
 
-export function useDeleteLayerHandler(map: MaplibreRef) {
-  const deletePolygonId = ref('')
+import type { MapLayerMouseEvent } from 'maplibre-gl'
+import type { MapLibreMapRef } from '@/types/map.type'
+
+export function useDeleteLayerHandler(map: MapLibreMapRef) {
+  const deletePolygonId = ref<number | null>(null)
 
   // クリックハンドラーを追加
   function onClickDeleteLayer() {
@@ -19,21 +21,22 @@ export function useDeleteLayerHandler(map: MaplibreRef) {
     if (!mapInstance) return
 
     mapInstance.off('click', FILL_LAYER_NAME, clickDeleteFillLayer)
+
+    if (deletePolygonId.value === null) return
     mapInstance.setFeatureState(
       { source: SOURCE_NAME, id: deletePolygonId.value },
       { selected: false },
     )
-    deletePolygonId.value = ''
+    deletePolygonId.value = null
   }
 
   //「ポリゴンの削除」のクリックイベント
-  function clickDeleteFillLayer(e: MapMouseEvent) {
+  function clickDeleteFillLayer(e: MapLayerMouseEvent) {
     const mapInstance = map?.value
     if (!mapInstance) return
 
     const feature = e.features?.[0]
     if (!feature || !feature.properties?.id) return
-
     const id = feature.properties.id
     deletePolygonId.value = id
 

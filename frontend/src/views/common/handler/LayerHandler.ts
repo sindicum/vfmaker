@@ -1,8 +1,12 @@
-import type { FeatureCollection } from 'geojson'
-import type { Map as MaplibreMap } from 'maplibre-gl'
-// import type { VariableFertilizationMap } from '@/types/create-variable-fertilization'
+import type { MapLibreMap } from '@/types/map.type'
+import type { FieldPolygonFeatureCollection } from '@/types/fieldpolygon.type'
+import type {
+  BaseGridFeatureCollection,
+  HumusPointFeatureCollection,
+  VfmapFeatureCollection,
+} from '@/types/vfm.type'
 
-export function addSource(map: MaplibreMap, featureCollection: FeatureCollection) {
+export function addSource(map: MapLibreMap, featureCollection: FieldPolygonFeatureCollection) {
   if (map?.getSource('registeredFields')) {
     return
   }
@@ -14,13 +18,13 @@ export function addSource(map: MaplibreMap, featureCollection: FeatureCollection
   })
 }
 
-export function removeSource(map: MaplibreMap) {
+export function removeSource(map: MapLibreMap) {
   if (map?.getSource('registeredFields')) {
     map.removeSource('registeredFields')
   }
 }
 
-export function addLayer(map: MaplibreMap) {
+export function addLayer(map: MapLibreMap) {
   if (map?.getLayer('registeredFillLayer')) {
     return
   }
@@ -46,7 +50,7 @@ export function addLayer(map: MaplibreMap) {
   })
 }
 
-export function removeLayer(map: MaplibreMap | null | undefined) {
+export function removeLayer(map: MapLibreMap) {
   if (map?.getLayer('registeredFillLayer')) {
     map.removeLayer('registeredFillLayer')
   }
@@ -55,7 +59,7 @@ export function removeLayer(map: MaplibreMap | null | undefined) {
   }
 }
 
-export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
+export function addHumusGrid(map: MapLibreMap, humusGrid: HumusPointFeatureCollection) {
   removeHumusGrid(map)
 
   map?.addSource('humusGrid', {
@@ -113,7 +117,7 @@ export function addHumusGrid(map: MaplibreMap, humusGrid: FeatureCollection) {
   })
 }
 
-export function removeHumusGrid(map: MaplibreMap) {
+export function removeHumusGrid(map: MapLibreMap) {
   // ポイントレイヤーの削除
   if (map && map.getLayer('humusGrid-label')) {
     map.removeLayer('humusGrid-label')
@@ -122,7 +126,7 @@ export function removeHumusGrid(map: MaplibreMap) {
 }
 
 export function addHumusRaster(
-  map: MaplibreMap,
+  map: MapLibreMap,
   canvas: HTMLCanvasElement,
   bounds: [number, number, number, number],
 ) {
@@ -155,24 +159,24 @@ export function addHumusRaster(
   )
 }
 
-export function removeHumusRaster(map: MaplibreMap) {
+export function removeHumusRaster(map: MapLibreMap) {
   if (map && map.getLayer('humusRaster')) {
     map.removeLayer('humusRaster')
     map.removeSource('humusRaster')
   }
 }
 
-export function addBaseMesh(map: MaplibreMap, baseMesh: FeatureCollection) {
-  removeBaseMesh(map)
-  map?.addSource('base-mesh', {
+export function addBaseGrid(map: MapLibreMap, baseGrid: BaseGridFeatureCollection) {
+  removeBaseGrid(map)
+  map?.addSource('base-grid', {
     type: 'geojson',
-    data: baseMesh,
+    data: baseGrid,
   })
 
   map?.addLayer({
-    id: 'base-mesh',
+    id: 'base-grid',
     type: 'line',
-    source: 'base-mesh',
+    source: 'base-grid',
     paint: {
       'line-color': 'red',
       'line-opacity': 0.6,
@@ -180,17 +184,16 @@ export function addBaseMesh(map: MaplibreMap, baseMesh: FeatureCollection) {
   })
 }
 
-export function removeBaseMesh(map: MaplibreMap) {
-  if (map && map.getLayer('base-mesh')) {
-    map.removeLayer('base-mesh')
-    map.removeSource('base-mesh')
+export function removeBaseGrid(map: MapLibreMap) {
+  if (map && map.getLayer('base-grid')) {
+    map.removeLayer('base-grid')
+    map.removeSource('base-grid')
   }
 }
 
 export function addVraMap(
-  map: MaplibreMap,
-  // humusMeanFeatureCollection: VariableFertilizationMap,
-  humusMeanFeatureCollection: FeatureCollection,
+  map: MapLibreMap,
+  vfmapFeatureCollection: VfmapFeatureCollection,
   id: string = 'default',
 ) {
   const applicationStep = [0.2, 0.1, 0, -0.1, -0.2]
@@ -198,7 +201,7 @@ export function addVraMap(
 
   map?.addSource('vra-map-' + id, {
     type: 'geojson',
-    data: humusMeanFeatureCollection,
+    data: vfmapFeatureCollection,
   })
 
   map?.addLayer({
@@ -244,7 +247,7 @@ export function addVraMap(
   })
 }
 
-export function removeVraMap(map: MaplibreMap, id: string = 'default') {
+export function removeVraMap(map: MapLibreMap, id: string = 'default') {
   if (map?.getLayer('vra-map-' + id)) {
     map.removeLayer('vra-map-' + id)
     map.removeLayer('vra-map-symbol-' + id)

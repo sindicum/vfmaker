@@ -2,7 +2,10 @@
 import { ref, computed } from 'vue'
 import { useErrorStore } from '@/stores/errorStore'
 import { ErrorCategory, ErrorSeverity } from '@/errors/types'
-import type { AppError } from '@/errors/types'
+
+interface AggregateErrorType extends Error {
+  errors: unknown[]
+}
 
 const errorStore = useErrorStore()
 
@@ -53,22 +56,24 @@ const clearAllErrors = () => {
 const exportErrors = () => {
   try {
     // シリアライズ可能なデータのみ抽出
-    const safeErrors = filteredErrors.value.map(error => ({
+    const safeErrors = filteredErrors.value.map((error) => ({
       id: error.id,
       category: error.category,
       severity: error.severity,
       message: error.message,
       userMessage: error.userMessage,
-      timestamp: error.timestamp?.toISOString ? error.timestamp.toISOString() : String(error.timestamp),
+      timestamp: error.timestamp?.toISOString
+        ? error.timestamp.toISOString()
+        : String(error.timestamp),
       context: error.context || {},
       originalErrorName: error.originalError?.name || 'Unknown',
-      originalErrorMessage: error.originalError?.message || 'No message'
+      originalErrorMessage: error.originalError?.message || 'No message',
     }))
-    
+
     const dataStr = JSON.stringify(safeErrors, null, 2)
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
     const exportFileDefaultName = `error-log-${new Date().toISOString()}.json`
-    
+
     const linkElement = document.createElement('a')
     linkElement.setAttribute('href', dataUri)
     linkElement.setAttribute('download', exportFileDefaultName)
@@ -112,17 +117,23 @@ const getSeverityColor = (severity: ErrorSeverity) => {
 }
 
 // AggregateErrorかどうかチェック
-const isAggregateError = (error: any): error is AggregateError => {
-  return error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)
+const isAggregateError = (error: unknown): error is AggregateErrorType => {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'errors' in error &&
+    Array.isArray((error as AggregateErrorType).errors)
+  )
 }
 
 // エラー情報を安全に取得
-const getErrorInfo = (error: any) => {
+const getErrorInfo = (error: unknown) => {
   try {
+    const err = error as Error | null
     return {
-      name: error?.name || 'Unknown',
-      message: error?.message || 'No message',
-      stack: error?.stack ? String(error.stack).slice(0, 1000) : '' // 最大1000文字
+      name: err?.name || 'Unknown',
+      message: err?.message || 'No message',
+      stack: err?.stack ? String(err.stack).slice(0, 1000) : '', // 最大1000文字
     }
   } catch {
     return { name: 'Error', message: 'Cannot read error', stack: '' }
@@ -130,7 +141,7 @@ const getErrorInfo = (error: any) => {
 }
 
 // AggregateErrorを安全に処理
-const getSafeAggregateErrors = (error: any) => {
+const getSafeAggregateErrors = (error: unknown) => {
   try {
     if (!isAggregateError(error)) return []
     return error.errors.slice(0, 10).map(getErrorInfo) // 最大10個まで
@@ -140,10 +151,10 @@ const getSafeAggregateErrors = (error: any) => {
 }
 
 // タイムスタンプを安全にフォーマット
-const formatTimestamp = (timestamp: any) => {
+const formatTimestamp = (timestamp: unknown) => {
   try {
     if (!timestamp) return 'Unknown time'
-    const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp as string | number)
     if (isNaN(date.getTime())) return 'Invalid date'
     return date.toLocaleString('ja-JP')
   } catch {
@@ -157,7 +168,7 @@ const formatTimestamp = (timestamp: any) => {
     <div class="container mx-auto px-4 py-8">
       <div class="bg-white rounded-lg shadow p-6">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">エラーログ</h1>
-        
+
         <!-- フィルタとアクション -->
         <div class="mb-6 space-y-4">
           <div class="flex flex-wrap gap-4">
@@ -176,7 +187,7 @@ const formatTimestamp = (timestamp: any) => {
                 <option :value="ErrorCategory.UNKNOWN">不明</option>
               </select>
             </div>
-            
+
             <!-- 重要度フィルタ -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">重要度</label>
@@ -191,7 +202,7 @@ const formatTimestamp = (timestamp: any) => {
                 <option :value="ErrorSeverity.CRITICAL">致命的</option>
               </select>
             </div>
-            
+
             <!-- アクションボタン -->
             <div class="flex-1 flex justify-end gap-2">
               <button
@@ -208,13 +219,11 @@ const formatTimestamp = (timestamp: any) => {
               </button>
             </div>
           </div>
-          
+
           <!-- エラー件数 -->
-          <div class="text-sm text-gray-600">
-            {{ filteredErrors.length }}件のエラー
-          </div>
+          <div class="text-sm text-gray-600">{{ filteredErrors.length }}件のエラー</div>
         </div>
-        
+
         <!-- エラー一覧 -->
         <div class="space-y-2">
           <div
@@ -231,12 +240,18 @@ const formatTimestamp = (timestamp: any) => {
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <span
-                      :class="[getCategoryColor(error.category), 'px-2 py-1 rounded-full text-xs font-medium']"
+                      :class="[
+                        getCategoryColor(error.category),
+                        'px-2 py-1 rounded-full text-xs font-medium',
+                      ]"
                     >
                       {{ error.category }}
                     </span>
                     <span
-                      :class="[getSeverityColor(error.severity), 'px-2 py-1 rounded-full text-xs font-medium']"
+                      :class="[
+                        getSeverityColor(error.severity),
+                        'px-2 py-1 rounded-full text-xs font-medium',
+                      ]"
                     >
                       {{ error.severity }}
                     </span>
@@ -248,27 +263,41 @@ const formatTimestamp = (timestamp: any) => {
                   <p class="text-sm text-gray-600 mt-1">{{ error.userMessage }}</p>
                 </div>
                 <svg
-                  :class="[expandedErrors[error.id] ? 'rotate-180' : '', 'w-5 h-5 text-gray-400 transition-transform']"
+                  :class="[
+                    expandedErrors[error.id] ? 'rotate-180' : '',
+                    'w-5 h-5 text-gray-400 transition-transform',
+                  ]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </div>
             </div>
-            
+
             <!-- エラー詳細 -->
             <div v-show="expandedErrors[error.id]" class="p-4 bg-white border-t border-gray-200">
               <!-- Original Error -->
               <div v-if="error.originalError" class="mb-4">
                 <h4 class="font-semibold text-gray-700 mb-2">Original Error:</h4>
                 <div class="bg-gray-100 p-3 rounded text-sm font-mono">
-                  <div class="text-red-600">{{ getErrorInfo(error.originalError).name }}: {{ getErrorInfo(error.originalError).message }}</div>
-                  
+                  <div class="text-red-600">
+                    {{ getErrorInfo(error.originalError).name }}:
+                    {{ getErrorInfo(error.originalError).message }}
+                  </div>
+
                   <!-- AggregateError の詳細 -->
                   <div v-if="isAggregateError(error.originalError)" class="mt-3">
-                    <div class="font-semibold mb-2">AggregateError contains {{ getSafeAggregateErrors(error.originalError).length }} errors:</div>
+                    <div class="font-semibold mb-2">
+                      AggregateError contains
+                      {{ getSafeAggregateErrors(error.originalError).length }} errors:
+                    </div>
                     <div
                       v-for="(subError, index) in getSafeAggregateErrors(error.originalError)"
                       :key="`${error.id}-sub-${index}`"
@@ -277,29 +306,40 @@ const formatTimestamp = (timestamp: any) => {
                       <div class="text-red-600">
                         Error {{ index + 1 }}: {{ subError.name }} - {{ subError.message }}
                       </div>
-                      <div v-if="subError.stack" class="text-xs text-gray-600 mt-1 whitespace-pre-wrap overflow-hidden">
+                      <div
+                        v-if="subError.stack"
+                        class="text-xs text-gray-600 mt-1 whitespace-pre-wrap overflow-hidden"
+                      >
                         {{ subError.stack }}
                       </div>
                     </div>
                   </div>
-                  
+
                   <!-- スタックトレース -->
-                  <div v-if="getErrorInfo(error.originalError).stack && !isAggregateError(error.originalError)" class="mt-2 text-xs text-gray-600 whitespace-pre-wrap overflow-hidden">
+                  <div
+                    v-if="
+                      getErrorInfo(error.originalError).stack &&
+                      !isAggregateError(error.originalError)
+                    "
+                    class="mt-2 text-xs text-gray-600 whitespace-pre-wrap overflow-hidden"
+                  >
                     {{ getErrorInfo(error.originalError).stack }}
                   </div>
                 </div>
               </div>
-              
+
               <!-- Context -->
               <div v-if="error.context && Object.keys(error.context).length > 0">
                 <h4 class="font-semibold text-gray-700 mb-2">Context:</h4>
                 <div class="bg-gray-100 p-3 rounded">
-                  <pre class="text-sm whitespace-pre-wrap">{{ JSON.stringify(error.context, null, 2) }}</pre>
+                  <pre class="text-sm whitespace-pre-wrap">{{
+                    JSON.stringify(error.context, null, 2)
+                  }}</pre>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- エラーがない場合 -->
           <div v-if="filteredErrors.length === 0" class="text-center py-8 text-gray-500">
             エラーログがありません

@@ -1,22 +1,26 @@
-import type { Feature, Polygon } from 'geojson'
-import type { BaseGrid, HumusPoints, ApplicationGridFeatures } from '@/types/geom'
 import { getHumusMeanFeatures } from '../calculations/humus'
 
 import { distributeFertilizerRateSteps } from '../calculations/distribution'
 import { distributeFertilizerRateStepless } from '../calculations/distribution'
+import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
+import type {
+  BaseGridFeatureCollection,
+  HumusPointFeatureCollection,
+  VfmapFeature,
+} from '@/types/vfm.type'
 
 export function createVfm(
-  activeFeature: Feature<Polygon, { id: string }>,
-  baseGrid: BaseGrid,
-  humusPoints: HumusPoints,
+  activeFeature: FieldPolygonFeature,
+  baseGrid: BaseGridFeatureCollection,
+  humusPoints: HumusPointFeatureCollection,
   fiveStepsFertilization: boolean,
   applicationStep: [number, number, number, number, number],
   baseFertilizationAmount: number,
   missingHumusDataInterpolation: boolean,
-) {
+): { features: VfmapFeature[]; areaSum: number; amountSum: number } {
   const humusMeanFeatures = getHumusMeanFeatures(activeFeature, baseGrid, humusPoints)
   // humusMeanFeaturesに対して、humus_meanの数値に基づきソート
-  const sortedFeatures = humusMeanFeatures
+  const features = humusMeanFeatures
     .filter((m) => m.properties !== null && typeof m.properties.humus_mean === 'number')
     .sort((m, n) => m.properties!.humus_mean - n.properties!.humus_mean)
 
@@ -24,7 +28,7 @@ export function createVfm(
   const humusMeanAreaMap = new Map<number, number>()
 
   // 各腐植値をキーとした累計面積のMapオブジェクトを生成
-  sortedFeatures.forEach((el) => {
+  features.forEach((el) => {
     if (el.properties === null) return
 
     const humusMean = el.properties.humus_mean
@@ -43,7 +47,7 @@ export function createVfm(
   // 面積合計と施肥量合計を初期化
   let areaSum = 0
   let amountSum = 0
-  sortedFeatures.forEach((v) => {
+  features.forEach((v) => {
     if (v.properties === null) return
     const humusMean = v.properties.humus_mean
     const area = v.properties.area
@@ -68,24 +72,24 @@ export function createVfm(
       amountSum += (unit * area) / 1000
     }
   })
-  return { sortedFeatures, areaSum, amountSum }
+  return { features, areaSum, amountSum }
 }
 
 // VrfMapの再作成
 export function updateVrf(
-  applicationGrid: ApplicationGridFeatures,
+  vfmapFeatures: VfmapFeature[],
   fiveStepsFertilization: boolean,
   applicationStep: [number, number, number, number, number],
   baseFertilizationAmount: number,
   missingHumusDataInterpolation: boolean,
-) {
-  applicationGrid.sort((m, n) => m.properties.humus_mean - n.properties.humus_mean)
+): { updatedVfmapFeatures: VfmapFeature[]; areaSum: number; amountSum: number } {
+  vfmapFeatures.sort((m, n) => m.properties.humus_mean - n.properties.humus_mean)
 
   // キー:腐植値、値:面積合計
   const humusMeanAreaMap = new Map<number, number>()
 
   // 各腐植値をキーとした累計面積のMapオブジェクトを生成
-  applicationGrid?.map((el) => {
+  vfmapFeatures?.map((el) => {
     const getHumusMean = humusMeanAreaMap.get(el.properties.humus_mean)
 
     if (getHumusMean !== undefined) {
@@ -108,7 +112,7 @@ export function updateVrf(
   // 面積合計と施肥量合計を初期化
   let areaSum = 0
   let amountSum = 0
-  applicationGrid.map((v) => {
+  vfmapFeatures.map((v) => {
     if (v.properties === null) return
 
     const humusMean = v.properties.humus_mean
@@ -136,5 +140,6 @@ export function updateVrf(
     }
   })
 
-  return { applicationGrid, areaSum, amountSum }
+  const updatedVfmapFeatures = vfmapFeatures
+  return { updatedVfmapFeatures, areaSum, amountSum }
 }

@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { CloudArrowUpIcon } from '@heroicons/vue/24/outline'
 import shp from 'shpjs'
-import { usePersistStore } from '@/stores/persistStore'
-import { useStore } from '@/stores/store'
+import { CloudArrowUpIcon } from '@heroicons/vue/24/outline'
+
+import { usePolygonFeature } from '../composables/usePolygonFeature'
 import { useErrorHandler, createValidationError } from '@/errors'
 
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useStore } from '@/stores/store'
+
+import type { Feature, FeatureCollection } from 'geojson'
+
 const isOpenDialog = defineModel('isOpenDialog')
-const persistStore = usePersistStore()
+const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
+  'fieldPolygonFeatureCollection',
+)
+
 const store = useStore()
+
 const { handleError } = useErrorHandler()
+const { maxFields, createField, allFieldsCount, readAllFields } = useStoreHandler()
+const { createFieldFromPolygon } = usePolygonFeature()
 
 const isUploading = ref(false)
 const uploadProgress = ref('')
@@ -26,7 +37,7 @@ const handleFileSelect = (event: Event) => {
 // ファイルアップロード処理
 const handleUpload = async () => {
   // ポリゴン登録上限
-  const maxFeatures = persistStore.maxFeatures
+  const maxFeatures = maxFields
 
   if (!selectedFile.value) {
     store.setMessage('Error', 'ファイルを選択してください')
@@ -53,7 +64,7 @@ const handleUpload = async () => {
 
     // ポリゴンのみを抽出
     const polygonFeatures = featureCollection.features.filter(
-      (feature: any) =>
+      (feature: Feature) =>
         feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'MultiPolygon',
     )
 
@@ -64,12 +75,12 @@ const handleUpload = async () => {
     uploadProgress.value = `${polygonFeatures.length}個のポリゴンを登録しています...`
 
     // 登録済みポリゴン数
-    const registeredFeaturesLength = persistStore.featurecollection.features.length
 
-    // 登録可能なポリゴン数
-    let remainingFeaturesLength = maxFeatures - registeredFeaturesLength
+    const count = await allFieldsCount()
 
-    // 各ポリゴンをpersistStoreに追加
+    // // 登録可能なポリゴン数
+    let remainingFeaturesLength = maxFeatures - count
+    // 各ポリゴンをindexedDbに追加
     let addedCount = 0
 
     for (const feature of polygonFeatures) {
@@ -77,14 +88,16 @@ const handleUpload = async () => {
         break
       }
       // IDとnameを設定
-      const id = crypto.randomUUID()
       feature.properties = feature.properties || {}
-      feature.id = id
+      const memoBlank = ''
 
-      persistStore.addFeature(feature)
+      const field = createFieldFromPolygon(feature, memoBlank)
+      await createField(field)
+
       addedCount++
       remainingFeaturesLength--
     }
+    fieldPolygonFeatureCollection.value = await readAllFields()
 
     if (addedCount > 0) {
       store.setMessage(
@@ -96,10 +109,7 @@ const handleUpload = async () => {
       return
     }
 
-    // リロード（ダイアログを閉じ、追加したマップを表示する）
-    setTimeout(() => {
-      window.location.reload()
-    }, 1200)
+    closeDialog()
   } catch (error) {
     const appError = createValidationError(
       'shapefile',

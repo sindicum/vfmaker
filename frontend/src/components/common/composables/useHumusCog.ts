@@ -4,10 +4,11 @@ import { Pool, fromUrl } from 'geotiff'
 import { useErrorHandler, createGeospatialError } from '@/errors'
 
 import type { ShallowRef } from 'vue'
-import type { MaplibreMap, RasterSourceSpecification } from '@/types/common'
+import type { MapLibreMap } from '@/types/map.type'
 import type { GeoTIFF } from 'geotiff'
+import type { RasterSourceSpecification } from 'maplibre-gl'
 
-export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
+export function useHumusCog(map: ShallowRef<MapLibreMap | null> | undefined) {
   const { handleError } = useErrorHandler()
 
   // インスタンスごとの状態管理
@@ -94,8 +95,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
     ]
   }
 
-  const generateCogSource = (url: string): Promise<RasterSourceSpecification | null> => {
-    // const generateCogSource = async (url: string): Promise<RasterSourceSpecification | null> => {
+  const generateCogSource = async (url: string): Promise<RasterSourceSpecification | null> => {
     try {
       const cleanUrl = url.startsWith('http') ? new URL(url).host + new URL(url).pathname : url
       const source: RasterSourceSpecification = {
@@ -217,8 +217,7 @@ export function useHumusCog(map: ShallowRef<MaplibreMap | null> | undefined) {
         isProtocolAdded = true
       }
 
-      const source = generateCogSource(cogUrl)
-      // const source = await generateCogSource(cogUrl)
+      const source = await generateCogSource(cogUrl)
 
       if (!source) {
         handleError(

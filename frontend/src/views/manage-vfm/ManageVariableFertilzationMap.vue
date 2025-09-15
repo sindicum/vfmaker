@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, inject, ref, watch, computed, type ShallowRef } from 'vue'
+import {
+  onMounted,
+  onUnmounted,
+  inject,
+  ref,
+  watch,
+  computed,
+  type ShallowRef,
+  onBeforeMount,
+} from 'vue'
 import MapBase from '@/components/map/MapBase.vue'
-import { usePersistStore } from '@/stores/persistStore'
 import { useStore } from '@/stores/store'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
 import {
   bbox as turfBbox,
@@ -10,7 +19,14 @@ import {
   point as turfPoint,
 } from '@turf/turf'
 
-import { addSource, addLayer, addVraMap, removeVraMap } from '../common/handler/LayerHandler'
+import {
+  addSource,
+  addLayer,
+  addVraMap,
+  removeVraMap,
+  removeSource,
+  removeLayer,
+} from '../common/handler/LayerHandler'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import {
   useErrorHandler,
@@ -25,17 +41,22 @@ import StepNavigationButtons from './components/StepNavigationButtons.vue'
 import RealtimeFertilizationDisplay from './components/RealtimeFertilizationDisplay.vue'
 import { useStepNavigation } from './composables/useStepNavigation'
 
-import type { MaplibreMap, MapMouseEvent } from '@/types/common'
-import type { FeatureCollection, Feature, Polygon } from 'geojson'
+import type { Feature, Polygon } from 'geojson'
+import type { MapLayerMouseEvent } from 'maplibre-gl'
+import type { MapLibreMap } from '@/types/map.type'
+import type { FieldPolygonFeatureCollection } from '@/types/fieldpolygon.type'
+import type { VfmapFeatureCollection } from '@/types/vfm.type'
+import type { VfmMapDB } from '@/types/indexedDb.type'
 
 const { isDesktop } = useControlScreenWidth()
-const persistStore = usePersistStore()
 const store = useStore()
 const { handleError } = useErrorHandler()
+
+const { readAllFields, readAllVfmMaps, deleteVfmMap } = useStoreHandler()
 const {
   currentStep,
   buttonConfig,
-  activeFeatureId,
+  activeFeatureUuid,
   activeVfmIndex,
   nextStep,
   previousStep,
@@ -47,10 +68,11 @@ const {
   onExecuteAction: onExecuteAction as () => void,
 })
 
-const map = inject<ShallowRef<MaplibreMap | null>>('mapkey')
+const map = inject<ShallowRef<MapLibreMap | null>>('mapkey')
 if (!map) throw new Error('Map instance not provided')
 
-const currentVfm = ref<FeatureCollection | null>(null)
+const activeVfm = ref<VfmapFeatureCollection | null>(null)
+const activeVfmId = ref<number | null>(null)
 const isOpenVfmDeleteDialog = ref(false)
 const isDeleteVfm = ref(false)
 const showRealtimeVfm = ref(false)
@@ -77,9 +99,25 @@ const message = computed(() => {
   }
 })
 
-onMounted(() => {
+const featureCollection = ref<FieldPolygonFeatureCollection>({
+  type: 'FeatureCollection',
+  features: [],
+})
+const vfms = ref<VfmMapDB[]>([])
+const isLoadIndexedDB = ref(false)
+
+onBeforeMount(async () => {
+  const res = await readAllFields()
+
+  featureCollection.value = res
+  vfms.value = await readAllVfmMaps()
+  isLoadIndexedDB.value = true
+})
+
+onMounted(async () => {
   const mapInstance = map?.value
   if (!mapInstance) return
+
   mapInstance.on('load', handleMapLoad)
 })
 
@@ -88,40 +126,59 @@ onUnmounted(() => {
   if (!mapInstance) return
 
   mapInstance.off('load', handleMapLoad)
-  mapInstance.off('click', 'registeredFillLayer', mapClickField)
+  mapInstance.off('click', 'registeredFillLayer', mapClickHandler)
+
+  // レイヤー・ソースの削除
+  removeLayer(mapInstance)
+  removeSource(mapInstance)
+  removeVraMap(mapInstance)
+
+  // 状態のリセット
+  reset()
+  activeVfm.value = null
+  showRealtimeVfm.value = false
+  currentFertilizerAmount.value = null
+  isLoadIndexedDB.value = false
+  featureCollection.value = { type: 'FeatureCollection', features: [] }
+  vfms.value = []
 })
 
 function handleMapLoad() {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  addSource(mapInstance, persistStore.featurecollection)
+  addSource(mapInstance, featureCollection.value)
   addLayer(mapInstance)
 
-  mapInstance.on('click', 'registeredFillLayer', mapClickField)
+  mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
 }
 
-function mapClickField(e: MapMouseEvent) {
+function mapClickHandler(e: MapLayerMouseEvent) {
   // ステップ1の場合のみ有効
   if (!showStep1.value) return
 
-  const id = e.features?.[0]?.id
-  if (id == null) return
-  activeFeatureId.value = String(id)
+  const uuid = e.features?.[0]?.properties.uuid
+  if (uuid == null) return
+  activeFeatureUuid.value = uuid
 }
 
-const addVfm = (vfm: FeatureCollection, index: number) => {
+const addVfm = (vfms_string: string, vfms_id: number, index: number) => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  currentVfm.value = vfm
+  const vfms: VfmapFeatureCollection = JSON.parse(vfms_string)
+
+  activeVfm.value = vfms
+  activeVfmId.value = vfms_id
   activeVfmIndex.value = index
 
-  addVraMap(mapInstance, currentVfm.value)
+  addVraMap(mapInstance, activeVfm.value)
 }
 
 const exportVfm = async () => {
-  const vfm = currentVfm.value
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  const vfm = activeVfm.value
   if (!vfm) return
 
   // 可変施肥マップの出力処理
@@ -167,7 +224,13 @@ const exportVfm = async () => {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      store.setMessage('Info', '可変施肥マップを出力しました')
+
+      // 初期状態に戻る
+      reset()
+      removeVraMap(mapInstance)
+      setTimeout(() => {
+        store.setMessage('Info', '可変施肥マップを出力しました')
+      }, 1000)
     }
   } catch (error) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
@@ -202,7 +265,7 @@ function isPolyLike(f: Feature | undefined): f is Feature<Polygon> {
 }
 
 const getCurrentLocationFertilizerAmount = () => {
-  if (!currentVfm.value || !activeFeatureId.value) return
+  if (!activeVfm.value || !activeFeatureUuid.value) return
 
   // 現在位置の緯度経度を取得
   const lat = store.currentGeolocation.lat ?? null
@@ -219,9 +282,10 @@ const getCurrentLocationFertilizerAmount = () => {
 
   const currentPoint = turfPoint([lng, lat])
 
-  const currentPolygon = persistStore.featurecollection.features.find(
-    (feature) => feature.properties?.id === activeFeatureId.value,
+  const currentPolygon = featureCollection.value.features.find(
+    (feature) => feature.properties?.uuid === activeFeatureUuid.value,
   )
+
   if (!isPolyLike(currentPolygon)) {
     currentFertilizerAmount.value = null
     return
@@ -232,19 +296,18 @@ const getCurrentLocationFertilizerAmount = () => {
     currentFertilizerAmount.value = null
     return
   }
-
-  const containing = currentVfm.value.features.find(
+  const containing = activeVfm.value.features.find(
     (feature) => isPolyLike(feature) && turfBooleanPointInPolygon(currentPoint, feature),
   )
 
   if (!containing?.properties) return
-  currentFertilizerAmount.value = containing.properties.amount_fertilization_unit
+  currentFertilizerAmount.value = containing.properties.amount_fertilization_unit || null
 }
 
 const fitToPolygon = (feature: Feature<Polygon>) => {
   if (!feature.properties) return
 
-  activeFeatureId.value = feature.properties.id
+  activeFeatureUuid.value = feature.properties.uuid
   const mapInstance = map?.value
   if (!mapInstance) {
     handleError(
@@ -304,7 +367,7 @@ const fitToAllView = () => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  const bbox = turfBbox(persistStore.featurecollection) as [number, number, number, number]
+  const bbox = turfBbox(featureCollection.value) as [number, number, number, number]
 
   mapInstance.fitBounds(bbox, {
     padding: 20,
@@ -328,39 +391,33 @@ watch(
     if (!mapInstance) return
 
     mapInstance.once('idle', () => {
-      addSource(mapInstance, persistStore.featurecollection)
+      addSource(mapInstance, featureCollection.value)
       addLayer(mapInstance)
 
-      if (activeVfmIndex.value !== null && currentVfm.value) {
-        addVraMap(mapInstance, currentVfm.value)
+      if (activeVfmIndex.value !== null && activeVfm.value) {
+        addVraMap(mapInstance, activeVfm.value)
       }
     })
   },
 )
 
 // 削除ボタン押下時の処理
-watch(isDeleteVfm, () => {
-  if (isDeleteVfm.value && activeVfmIndex.value !== null) {
-    persistStore.featurecollection.features
-      .find((feature) => feature.properties.id === activeFeatureId.value)
-      ?.properties.vfms.splice(activeVfmIndex.value, 1)
+watch(isDeleteVfm, async (newValue) => {
+  if (!newValue) return // falseの時は何もしない（isDeleteVfm.value = falseでのトリガー回避）
 
-    isDeleteVfm.value = false
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  if (!activeVfmId.value) return
 
-    const vfmsLength = persistStore.featurecollection.features.find(
-      (feature) => feature.properties.id === activeFeatureId.value,
-    )?.properties.vfms.length
+  await deleteVfmMap(activeVfmId.value)
+  removeVraMap(mapInstance)
+  vfms.value = await readAllVfmMaps()
+  activeVfm.value = null
+  const res = await readAllFields()
+  featureCollection.value = res
 
-    if (vfmsLength !== 0) {
-      previousStep()
-      activeVfmIndex.value = null
-    } else {
-      reset()
-    }
-  }
-  if (map?.value) {
-    removeVraMap(map?.value)
-  }
+  previousStep()
+  isDeleteVfm.value = false
 })
 
 const runRealtimeVfm = () => {
@@ -380,15 +437,15 @@ const stopRealtimeVfm = () => {
 }
 
 function validateStep1() {
-  const vfmsLength = persistStore.featurecollection.features.find(
-    (feature) => feature.properties.id === activeFeatureId.value,
-  )?.properties.vfms.length
+  const vfmsLength = featureCollection.value.features.find(
+    (feature) => feature.properties.uuid === activeFeatureUuid.value,
+  )?.properties.vfm_count
 
   if (vfmsLength === 0) {
     store.setMessage('Error', 'ポリゴンにVFマップが登録されていません')
     return false
   }
-  if (activeFeatureId.value === null) {
+  if (activeFeatureUuid.value === null) {
     store.setMessage('Error', 'ポリゴンが選択されていません')
     return false
   }
@@ -402,7 +459,7 @@ function onBackwardToStep1() {
 }
 
 function onClearSelection() {
-  activeFeatureId.value = null
+  activeFeatureUuid.value = null
   fitToAllView()
 }
 
@@ -425,6 +482,7 @@ const selectedDialog = (selected: boolean) => {
   <main class="fixed top-16 h-[calc(100dvh-4rem)] w-screen lg:flex">
     <!-- sidebar -->
     <div
+      v-if="isLoadIndexedDB"
       :class="[
         isDesktop
           ? 'relative p-8 h-full bg-slate-100 w-90 shrink-0'
@@ -455,10 +513,10 @@ const selectedDialog = (selected: boolean) => {
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr
-                v-for="(feature, index) in persistStore.featurecollection.features"
+                v-for="(feature, index) in featureCollection.features"
                 :key="index"
                 :class="[
-                  activeFeatureId === feature.properties.id
+                  activeFeatureUuid === feature.properties.uuid
                     ? 'bg-amber-50'
                     : 'cursor-pointer transition-colors duration-200 bg-white',
                 ]"
@@ -477,7 +535,7 @@ const selectedDialog = (selected: boolean) => {
                       'flex items-center',
                     ]"
                   >
-                    {{ feature.properties.vfms.length }}
+                    {{ feature.properties.vfm_count }}
                   </div>
                 </td>
                 <td class="px-3 py-2">{{ feature.properties.memo }}</td>
@@ -488,42 +546,37 @@ const selectedDialog = (selected: boolean) => {
 
         <div v-if="showStep2">
           <div
-            v-for="feature in persistStore.featurecollection.features"
-            :key="feature.properties.id"
+            :class="[
+              isDesktop ? 'max-h-[calc(100vh-18rem)]' : 'max-h-44 sm:max-h-64',
+              'overflow-y-auto',
+            ]"
           >
-            <div
-              v-if="feature.properties.id === activeFeatureId"
-              :class="[
-                isDesktop ? 'max-h-[calc(100vh-18rem)]' : 'max-h-44 sm:max-h-64',
-                'overflow-y-auto',
-              ]"
-            >
-              <table class="w-full text-center table-fixed">
-                <thead class="sticky top-0 bg-gray-50 z-10">
-                  <tr class="text-xs font-medium text-gray-500">
-                    <th class="px-3 py-2 w-1/4 lg:w-1/3">10aあたり<br />施肥量</th>
-                    <th class="px-3 py-2 w-1/4 lg:w-1/3">総施肥量</th>
-                    <th class="px-3 py-2 w-1/2 lg:w-1/3">VFマップ<br />メモ</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                  <tr
-                    v-for="(vfm, index) in feature.properties.vfms"
-                    :key="vfm.id"
-                    :class="[
-                      activeVfmIndex === index
-                        ? 'bg-amber-50'
-                        : 'cursor-pointer transition-colors duration-200 bg-white',
-                    ]"
-                    @click="addVfm(vfm.vfm, index)"
-                  >
-                    <td class="px-3 py-2">{{ vfm.amount_10a }} kg</td>
-                    <td class="px-3 py-2">{{ vfm.total_amount }} kg</td>
-                    <td class="px-3 py-2">{{ vfm.memo }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table class="w-full text-center table-fixed">
+              <thead class="sticky top-0 bg-gray-50 z-10">
+                <tr class="text-xs font-medium text-gray-500">
+                  <th class="px-3 py-2 w-1/4 lg:w-1/3">10aあたり<br />施肥量</th>
+                  <th class="px-3 py-2 w-1/4 lg:w-1/3">総施肥量</th>
+                  <th class="px-3 py-2 w-1/2 lg:w-1/3">VFマップ<br />メモ</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr
+                  v-for="(vfm, index) in vfms"
+                  :key="index"
+                  :class="[
+                    activeVfmIndex === index
+                      ? 'bg-amber-50'
+                      : 'cursor-pointer transition-colors duration-200 bg-white',
+                  ]"
+                  @click="addVfm(vfm.vfm, vfm.id, index)"
+                  v-show="vfm.uuid === activeFeatureUuid"
+                >
+                  <td class="px-3 py-2">{{ vfm.amount_10a }} kg</td>
+                  <td class="px-3 py-2">{{ vfm.total_amount }} kg</td>
+                  <td class="px-3 py-2">{{ vfm.memo }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

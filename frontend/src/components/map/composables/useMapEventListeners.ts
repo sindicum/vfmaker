@@ -2,8 +2,7 @@ import type { Source } from 'maplibre-gl'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import { useErrorHandler, createNetworkError } from '@/errors'
-import type { MaplibreRef } from '@/types/common'
-
+import type { MapLibreMapRef } from '@/types/map.type'
 interface MapStyleProperty {
   name: string
   url: string
@@ -11,7 +10,7 @@ interface MapStyleProperty {
 
 interface UseMapEventListenersOptions {
   mapStyleProperty: MapStyleProperty[]
-  map: MaplibreRef
+  map: MapLibreMapRef
 }
 
 export function useMapEventListeners({ mapStyleProperty, map }: UseMapEventListenersOptions) {

@@ -4,9 +4,9 @@ import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
-import type { dialogType } from '@/types/common'
+import type { DialogType } from '@/types/common.type'
 
-const currentDialogName = ref<dialogType>('')
+const currentDialogName = ref<DialogType>('')
 
 const step2Status = defineModel('step2Status')
 const gridRotationAngle = defineModel('gridRotationAngle')
@@ -24,7 +24,7 @@ const gridParams = {
 }
 
 // ボタン入力ダイアログを表示
-const onClickDialog = (dialogName: dialogType) => {
+const onClickDialog = (dialogName: DialogType) => {
   currentDialogName.value = dialogName
 }
 

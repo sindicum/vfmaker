@@ -9,7 +9,7 @@ import { useNetworkStatus } from '@/components/common/composables/useNetworkStat
 import { useErrorHandler, createNetworkError } from '@/errors'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { MaplibreRef } from '@/types/common'
+import type { MapLibreMapRef } from '@/types/map.type'
 
 const store = useStore()
 const persistStore = usePersistStore()
@@ -29,7 +29,7 @@ const mapStyleProperty = [
 ]
 
 const mapContainer = shallowRef<HTMLDivElement | null>(null)
-const map = inject<MaplibreRef>('mapkey')
+const map = inject<MapLibreMapRef>('mapkey')
 if (!map) throw new Error('Map instance not provided')
 
 // Composablesの初期化

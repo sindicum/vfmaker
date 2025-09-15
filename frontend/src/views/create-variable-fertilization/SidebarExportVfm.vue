@@ -1,32 +1,29 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, toRaw } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
-import VfmSaveDialog from './components/VfmSaveDialog.vue'
-import { usePersistStore } from '@/stores/persistStore'
+import { useStore } from '@/stores/store'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
-import type { dialogType } from '@/types/common'
-import type { Feature, Polygon, GeoJsonProperties } from 'geojson'
-import type { VariableFertilizationMap } from '@/types/create-variable-fertilization'
+import type { DialogType } from '@/types/common.type'
+import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
+import type { VfmapFeature } from '@/types/vfm.type'
 
-const currentDialogName = ref<dialogType>('')
-const persistStore = usePersistStore()
+const currentDialogName = ref<DialogType>('')
+const store = useStore()
 
 const area = defineModel<number>('area')
 const step3Status = defineModel<string>('step3Status')
 const baseFertilizationAmount = defineModel<number>('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel<number>('variableFertilizationRangeRate')
 
-const applicationGridFeatures =
-  defineModel<Feature<Polygon, GeoJsonProperties>[]>('applicationGridFeatures')
+const vfmapFeatures = defineModel<VfmapFeature[]>('vfmapFeatures')
 const totalAmount = defineModel<number>('totalAmount')
-const activeFeatureId = defineModel<string>('activeFeatureId')
+const activeFeature = defineModel<FieldPolygonFeature | null>('activeFeature')
 
 const { isDesktop } = useControlScreenWidth()
-
-const isOpenVfmSaveDialog = ref(false)
-const isOverwriteSave = ref(false)
+const { createVfmMap } = useStoreHandler()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
@@ -36,7 +33,7 @@ const gridParams = {
 const vfmMemo = ref('')
 
 // ボタン入力ダイアログを表示
-const onClickDialog = (dialogName: dialogType) => {
+const onClickDialog = (dialogName: DialogType) => {
   currentDialogName.value = dialogName
 }
 
@@ -45,27 +42,19 @@ const returnStep2 = () => {
   step3Status.value = 'upcoming'
 }
 
-// VfmSaveDialogの状態変化を監視し、上書き保存の場合は保存処理を実行
-watch([isOverwriteSave], () => {
-  if (isOverwriteSave.value) {
-    // 同一IDのマップを削除
-    persistStore.variableFertilizationMaps = persistStore.variableFertilizationMaps.filter(
-      (v) => v.id !== activeFeatureId.value,
-    )
-    executeSave()
-    isOverwriteSave.value = false
-  }
-})
-
 // 保存処理を実行
-const executeSave = () => {
-  const vfms: VariableFertilizationMap = {
+const executeSave = async () => {
+  if (!activeFeature.value?.properties.uuid) {
+    store.setMessage('Error', '圃場が選択されていません')
+    return
+  }
+
+  const vfms = {
+    uuid: activeFeature.value.properties.uuid,
     vfm: {
-      type: 'FeatureCollection',
-      features: applicationGridFeatures.value ?? [],
+      type: 'FeatureCollection' as const,
+      features: toRaw(vfmapFeatures.value) ?? [],
     },
-    id: activeFeatureId.value ?? '',
-    created_at: new Date().toISOString(),
     amount_10a: Math.round(baseFertilizationAmount.value ?? 0),
     total_amount: Math.round(totalAmount.value ?? 0),
     area: Math.round(area.value ?? 0) / 100,
@@ -73,14 +62,17 @@ const executeSave = () => {
     memo: vfmMemo.value,
   }
 
-  // フィーチャコレクションの中からactiveFeatureId.valueに一致するフィーチャに対して、properties.vfmsの配列にvfmを追加
-  const isSuccess: 'success' | 'error' = persistStore.addVfm(activeFeatureId.value ?? '', vfms)
-
-  if (isSuccess === 'success') {
-    // Step1に戻る
-    step3Status.value = 'complete'
-    vfmMemo.value = ''
-  }
+  await createVfmMap(vfms)
+    .then(() => {
+      step3Status.value = 'complete'
+      vfmMemo.value = ''
+    })
+    .catch((error) => {
+      store.setMessage('Error', error)
+      console.error(error)
+      step3Status.value = 'upcoming'
+      vfmMemo.value = ''
+    })
 }
 </script>
 
@@ -187,9 +179,5 @@ const executeSave = () => {
     v-model:dialog-name="currentDialogName"
     v-model:base-fertilization-amount="baseFertilizationAmount"
     v-model:variable-fertilization-range-rate="variableFertilizationRangeRate"
-  />
-  <VfmSaveDialog
-    v-model:is-open-vfm-save-dialog="isOpenVfmSaveDialog"
-    v-model:is-overwrite-save="isOverwriteSave"
   />
 </template>

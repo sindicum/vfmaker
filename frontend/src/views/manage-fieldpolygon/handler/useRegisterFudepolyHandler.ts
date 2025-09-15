@@ -10,10 +10,11 @@ import {
   COORDINATE_PRECISION,
 } from './LayerHandler'
 
-import type { DrawRef, MaplibreRef, MapMouseEvent } from '@/types/common'
+import type { MapLibreMapRef, DrawRef } from '@/types/map.type'
 import type { Feature, Polygon } from 'geojson'
+import type { MapLayerMouseEvent } from 'maplibre-gl'
 
-export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
+export function useRegisterFudepolyHandler(map: MapLibreMapRef, draw: DrawRef) {
   function onClickRegisterFudepolyLayer() {
     const mapInstance = map?.value
     if (!mapInstance) return
@@ -28,7 +29,7 @@ export function useRegisterFudepolyHandler(map: MaplibreRef, draw: DrawRef) {
     mapInstance.off('click', PMTILES.fillLayerId, clickRegisterFudepolyLayer)
   }
 
-  function clickRegisterFudepolyLayer(e: MapMouseEvent) {
+  function clickRegisterFudepolyLayer(e: MapLayerMouseEvent) {
     const mapInstance = map?.value
     if (!mapInstance) return
     const drawInstance = draw?.value

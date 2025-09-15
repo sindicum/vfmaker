@@ -8,10 +8,10 @@ import Alert from '@/components/common/components/Alert.vue'
 import Loading from '@/components/common/components/Loading.vue'
 import ErrorBoundary from '@/components/common/components/ErrorBoundary.vue'
 
-import type { MaplibreMap } from '@/types/common'
+import type { MapLibreMap } from './types/map.type'
 
 // MaplibreMapオブジェクトを下位コンポーネントに注入（DI）する
-const map = shallowRef<MaplibreMap>(null)
+const map = shallowRef<MapLibreMap>(null)
 provide('mapkey', map)
 
 const store = useStore()

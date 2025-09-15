@@ -2,7 +2,7 @@ import { Map as MaplibreMapObject } from 'maplibre-gl'
 import { useStore } from '@/stores/store'
 import { usePersistStore } from '@/stores/persistStore'
 import { useErrorHandler, createNetworkError, createGeneralError } from '@/errors'
-import type { MaplibreRef } from '@/types/common'
+import type { MapLibreMapRef } from '@/types/map.type'
 
 interface MapStyleProperty {
   name: string
@@ -11,7 +11,7 @@ interface MapStyleProperty {
 
 interface UseMapInitializationOptions {
   mapStyleProperty: MapStyleProperty[]
-  map: MaplibreRef
+  map: MapLibreMapRef
 }
 
 export function useMapInitialization({ mapStyleProperty, map }: UseMapInitializationOptions) {

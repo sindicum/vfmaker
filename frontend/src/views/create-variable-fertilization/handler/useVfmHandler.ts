@@ -1,14 +1,13 @@
 import { ref, computed, watch } from 'vue'
 
-import type { GeoJSONSource } from 'maplibre-gl'
+import { updateVrf } from './services/vfmServices'
 
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import type { FeatureCollection } from 'geojson'
-import type { MaplibreRef } from '@/types/common'
-import type { ApplicationGridFeatures } from '@/types/geom'
-
-import { updateVrf } from './services/vfmServices'
+import type { GeoJSONSource } from 'maplibre-gl'
+import type { MapLibreMapRef } from '@/types/map.type'
+import type { VfmapFeature } from '@/types/vfm.type'
 
 /**
  * @param map
@@ -18,7 +17,7 @@ import { updateVrf } from './services/vfmServices'
  * @returns getVfm,
  */
 
-export function useVfmHandler(map: MaplibreRef) {
+export function useVfmHandler(map: MapLibreMapRef) {
   const baseFertilizationAmount = ref(100)
   const variableFertilizationRangeRate = ref(20)
   const applicationGridFeatureCollection = ref<FeatureCollection>({
@@ -26,7 +25,7 @@ export function useVfmHandler(map: MaplibreRef) {
     features: [],
   })
 
-  const applicationGridFeatures = ref<ApplicationGridFeatures>([])
+  const vfmapFeatures = ref<VfmapFeature[]>([])
 
   const configPersistStore = useConfigPersistStore()
 
@@ -61,8 +60,8 @@ export function useVfmHandler(map: MaplibreRef) {
     }
 
     timeoutId = window.setTimeout(() => {
-      const { applicationGrid, areaSum, amountSum } = updateVrf(
-        applicationGridFeatures.value,
+      const { updatedVfmapFeatures, areaSum, amountSum } = updateVrf(
+        vfmapFeatures.value,
         configPersistStore.fiveStepsFertilization,
         applicationStep.value,
         baseFertilizationAmount.value,
@@ -72,7 +71,7 @@ export function useVfmHandler(map: MaplibreRef) {
       totalArea.value = areaSum
       totalAmount.value = amountSum
       const sourceData = map?.value?.getSource('vra-map-default') as GeoJSONSource
-      applicationGridFeatureCollection.value.features = applicationGrid
+      applicationGridFeatureCollection.value.features = updatedVfmapFeatures
       if (!sourceData) return
       sourceData.setData(applicationGridFeatureCollection.value)
     }, 300)
@@ -81,7 +80,7 @@ export function useVfmHandler(map: MaplibreRef) {
   return {
     baseFertilizationAmount,
     variableFertilizationRangeRate,
-    applicationGridFeatures,
+    vfmapFeatures,
     applicationStep,
     totalArea,
     totalAmount,

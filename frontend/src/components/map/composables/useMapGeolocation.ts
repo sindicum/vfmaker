@@ -8,10 +8,9 @@ import {
   createPermissionError,
   createGeneralError,
 } from '@/errors'
-import type { MaplibreRef } from '@/types/common'
-
+import type { MapLibreMapRef } from '@/types/map.type'
 interface UseMapGeolocationOptions {
-  map: MaplibreRef
+  map: MapLibreMapRef
 }
 
 export function useMapGeolocation({ map }: UseMapGeolocationOptions) {
