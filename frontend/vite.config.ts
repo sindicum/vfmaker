@@ -13,4 +13,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // 開発環境でのデバッグを容易にするためソースマップを生成
+    sourcemap: true,
+  },
 })

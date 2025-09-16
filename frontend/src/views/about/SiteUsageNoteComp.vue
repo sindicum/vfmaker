@@ -25,10 +25,10 @@ const siteUsageNotes = [
   {
     title: 'データ保存・バックアップについて',
     content:
-      '本サービスに登録した圃場情報は、Webブラウザのローカルストレージに保存されます。\
-      ローカルストレージに保存できる登録圃場数は10件までです。\
+      '本サービスに登録した圃場情報は、Webブラウザのストレージ（indexedDB）に保存されます。\
+      ストレージに保存できる登録圃場数および可変施肥マップ数は10件までです。\
       入力された情報はサーバーに保存されません。\
-      ブラウザのローカルストレージは、キャッシュ削除などの操作で失われる可能性があることを了承お願いいたします。',
+      ブラウザのストレージは、利用状況により失われる可能性があることを了承お願いいたします。',
   },
   {
     title: 'サービス提供の中断・変更について',
@@ -46,8 +46,8 @@ const siteUsageNotes = [
 
 <template>
   <div class="w-full lg:w-5xl h-full mx-4 my-8 px-4">
-    <h1 class="text-3xl font-bold text-center text-amber-900 my-10">VFMakerについて</h1>
-    <div class="my-18 mx-6 leading-loose">
+    <h1 class="text-3xl font-bold text-center text-amber-900 my-4 sm:my-10">VFMakerについて</h1>
+    <div class="my-4 sm:my-18 mx-2 sm:mx-6 leading-loose text-sm sm:text-base">
       本サービスは、オープンデータとサーバーレス技術、オープンソース開発によって構築されています。
       農業DXの発展に寄与することを目指し、どなたでもアクセスし活用できる環境を提供しています。<br />
       パソコン、タブレット、スマートフォンのいずれでも利用可能なレスポンシブデザインを採用しています。<br />
@@ -56,8 +56,8 @@ const siteUsageNotes = [
     </div>
     <ul class="list-decimal list-inside">
       <div class="my-8" v-for="note in siteUsageNotes" :key="note.title">
-        <li class="text-xl font-bold my-2 text-slate-800">{{ note.title }}</li>
-        <div class="leading-loose mx-6">
+        <li class="text-base sm:text-xl font-bold my-2 text-slate-800">{{ note.title }}</li>
+        <div class="leading-loose mx-2 sm:mx-6 text-sm sm:text-base">
           {{ note.content }}
         </div>
       </div>

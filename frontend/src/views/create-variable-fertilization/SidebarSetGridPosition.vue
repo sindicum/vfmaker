@@ -2,11 +2,11 @@
 import { ref } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
-import type { dialogType } from '@/types/maplibre'
+import type { DialogType } from '@/types/common.type'
 
-const currentDialogName = ref<dialogType>('')
+const currentDialogName = ref<DialogType>('')
 
 const step2Status = defineModel('step2Status')
 const gridRotationAngle = defineModel('gridRotationAngle')
@@ -24,7 +24,7 @@ const gridParams = {
 }
 
 // ボタン入力ダイアログを表示
-const onClickDialog = (dialogName: dialogType) => {
+const onClickDialog = (dialogName: DialogType) => {
   currentDialogName.value = dialogName
 }
 
@@ -49,7 +49,7 @@ const returnStep1 = () => {
         'px-5 transition-all duration-500',
       ]"
     >
-      <div class="text-rose-600 my-4">回転角度・グリッド幅を調整</div>
+      <div class="text-rose-600 my-3">回転角度・グリッド幅を調整</div>
       <div
         :class="[
           isDesktop
@@ -145,7 +145,7 @@ const returnStep1 = () => {
           class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
           @click="toStep3"
         >
-          <span>進む</span>
+          進む
         </button>
       </div>
     </div>

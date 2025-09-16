@@ -1,38 +1,40 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useStore } from '@/stores/store'
-import { useControlScreenWidth } from '@/composables/useControlScreenWidth'
+import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
+import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
-import type { dialogType } from '@/types/maplibre'
+import type { DialogType } from '@/types/common.type'
+import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
+import type { VfmapFeature } from '@/types/vfm.type'
 
-const currentDialogName = ref<dialogType>('')
+const currentDialogName = ref<DialogType>('')
 const store = useStore()
 
 const area = defineModel<number>('area')
-const step3Status = defineModel('step3Status')
-const baseFertilizationAmount = defineModel('baseFertilizationAmount')
-const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
-const applicationGridFeatures = defineModel('applicationGridFeatures')
+const step3Status = defineModel<string>('step3Status')
+const baseFertilizationAmount = defineModel<number>('baseFertilizationAmount')
+const variableFertilizationRangeRate = defineModel<number>('variableFertilizationRangeRate')
+
+const vfmapFeatures = defineModel<VfmapFeature[]>('vfmapFeatures')
 const totalAmount = defineModel<number>('totalAmount')
+const activeFeature = defineModel<FieldPolygonFeature | null>('activeFeature')
 
 const { isDesktop } = useControlScreenWidth()
+const { createVfmMap } = useStoreHandler()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
   variableFertilizationRangeRate: { min: 1, max: 99 },
 }
 
-// ボタン入力ダイアログを表示
-const onClickDialog = (dialogName: dialogType) => {
-  currentDialogName.value = dialogName
-}
+const vfmMemo = ref('')
 
-// Stepの終了（可変施肥マップを出力しStep1に戻る）
-const endStep = () => {
-  exportVfm()
-  step3Status.value = 'complete'
+// ボタン入力ダイアログを表示
+const onClickDialog = (dialogName: DialogType) => {
+  currentDialogName.value = dialogName
 }
 
 // Step2に戻る
@@ -40,40 +42,37 @@ const returnStep2 = () => {
   step3Status.value = 'upcoming'
 }
 
-// 可変施肥マップの出力
-async function exportVfm() {
-  const url = import.meta.env.VITE_API_URL
-  const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
-  store.isLoading = true
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      type: 'FeatureCollection',
-      features: applicationGridFeatures.value,
-    }),
-  })
-  if (!res.ok) {
-    store.alertMessage.alertType = 'Error'
-    store.alertMessage.message = 'HTTPエラー' + res.status
-  } else {
-    const json = await res.json()
-    const downloadUrl = json.download_url
-
-    // 自動でダウンロードを実行
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = '' // ファイル名を指定しない場合、元のファイル名が使われる
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = '可変施肥マップを出力しました'
+// 保存処理を実行
+const executeSave = async () => {
+  if (!activeFeature.value?.properties.uuid) {
+    store.setMessage('Error', '圃場が選択されていません')
+    return
   }
-  store.isLoading = false
+
+  const vfms = {
+    uuid: activeFeature.value.properties.uuid,
+    vfm: {
+      type: 'FeatureCollection' as const,
+      features: toRaw(vfmapFeatures.value) ?? [],
+    },
+    amount_10a: Math.round(baseFertilizationAmount.value ?? 0),
+    total_amount: Math.round(totalAmount.value ?? 0),
+    area: Math.round(area.value ?? 0) / 100,
+    fertilization_range: variableFertilizationRangeRate.value ?? 0,
+    memo: vfmMemo.value,
+  }
+
+  await createVfmMap(vfms)
+    .then(() => {
+      step3Status.value = 'complete'
+      vfmMemo.value = ''
+    })
+    .catch((error) => {
+      store.setMessage('Error', error)
+      console.error(error)
+      step3Status.value = 'upcoming'
+      vfmMemo.value = ''
+    })
 }
 </script>
 
@@ -81,7 +80,7 @@ async function exportVfm() {
   <div v-if="isDesktop || step3Status === 'current'" class="grid-cols-1 grid items-center">
     <StepStatusHeader
       id="3"
-      name="施肥量の決定とファイル出力"
+      name="施肥量の決定とファイル保存"
       v-model:current-step-status="step3Status"
     />
 
@@ -91,7 +90,7 @@ async function exportVfm() {
         'px-5 transition-all duration-500',
       ]"
     >
-      <div class="text-rose-600 my-4">基準施肥量および可変量を入力</div>
+      <div class="text-rose-600 my-3">基準施肥量および可変量を入力</div>
 
       <div
         :class="[
@@ -128,20 +127,36 @@ async function exportVfm() {
           type="range"
           :min="gridParams.variableFertilizationRangeRate.min"
           :max="gridParams.variableFertilizationRangeRate.max"
-          v-model="variableFertilizationRangeRate"
+          v-model.number="variableFertilizationRangeRate"
+        />
+        <label>メモ</label>
+        <input
+          v-model="vfmMemo"
+          :class="[
+            isDesktop ? 'col-span-2' : 'col-span-3',
+            'border rounded-md bg-white hover:bg-gray-50 px-2',
+          ]"
+          placeholder="任意"
+          maxlength="64"
         />
       </div>
       <div
         :class="[
-          isDesktop ? 'grid-cols-2 gap-3 ' : 'grid-cols-4',
-          'grid my-3 items-center font-bold text-sky-600',
+          isDesktop
+            ? 'grid-cols-[7fr_2fr_4fr] col-span-1 gap-y-3'
+            : 'grid-cols-4 col-span-2 gap-y-2',
+          'grid items-center bg-amber-50 rounded-lg border border-amber-200 mt-3 p-2',
         ]"
       >
-        <label>合計施肥量</label>
-        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round(totalAmount ?? 0) }} kg</div>
+        <label class="text-amber-800">合計施肥量</label>
+        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
+          {{ Math.round(totalAmount ?? 0) }} kg
+        </div>
 
-        <label>概算面積</label>
-        <div :class="[isDesktop ? '' : 'text-center']">{{ Math.round((area ?? 0) / 100) }} a</div>
+        <label class="text-amber-800">概算面積</label>
+        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
+          {{ Math.round((area ?? 0) / 100) }} a
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-3 justify-center my-4">
         <button
@@ -152,9 +167,9 @@ async function exportVfm() {
         </button>
         <button
           class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
-          @click="endStep"
+          @click="executeSave"
         >
-          <span>ファイル出力</span>
+          <span>保存</span>
         </button>
       </div>
     </div>

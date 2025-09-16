@@ -1,11 +1,15 @@
 {
   "extends": "./tsconfig.app.json",
+  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "test/**/*"],
   "exclude": [],
   "compilerOptions": {
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.vitest.tsbuildinfo",
-
+    "baseUrl": ".",
     "lib": [],
-    "types": ["node", "jsdom"]
+    "types": ["node", "jsdom"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   }
 }

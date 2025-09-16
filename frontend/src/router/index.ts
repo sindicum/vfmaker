@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/home/HomeView.vue'
-import ManageFieldInfo from '../views/manage-fieldinfo/ManageFieldinfoView.vue'
+import ManageFieldPolygon from '../views/manage-fieldpolygon/ManageFieldPolygonView.vue'
 import CreateVariableFertilizationMap from '@/views/create-variable-fertilization/CreateVariableFertilizationView.vue'
+import ManageVariableFertilizationMap from '@/views/manage-vfm/ManageVariableFertilzationMap.vue'
 import AboutView from '@/views/about/AboutView.vue'
 
 const router = createRouter({
@@ -13,9 +14,9 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/manage-fieldinfo',
-      name: 'ManageFieldInfo',
-      component: ManageFieldInfo,
+      path: '/manage-fieldpolygon',
+      name: 'ManageFieldPolygon',
+      component: ManageFieldPolygon,
     },
     {
       path: '/create-vfm',
@@ -23,9 +24,20 @@ const router = createRouter({
       component: CreateVariableFertilizationMap,
     },
     {
+      path: '/manage-vfm',
+      name: 'ManageVfm',
+      component: ManageVariableFertilizationMap,
+    },
+    {
       path: '/about',
       name: 'About',
       component: AboutView,
+    },
+    {
+      path: '/error-log',
+      name: 'ErrorLog',
+      component: () => import('@/views/common/error/ErrorLog.vue'),
+      meta: { title: 'エラーログ' },
     },
     {
       path: '/:pathMatch(.*)*',

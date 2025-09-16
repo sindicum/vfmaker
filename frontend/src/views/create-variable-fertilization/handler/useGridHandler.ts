@@ -1,9 +1,6 @@
 import { computed, ref, watch } from 'vue'
-import { usePersistStore } from '@/stores/persistStore'
-import { useConfigPersistStore } from '@/stores/configPersistStore'
-import { useStore } from '@/stores/store'
 
-import { Pool, fromUrl } from 'geotiff'
+import { fromUrl, Pool } from 'geotiff'
 import proj4 from 'proj4'
 import {
   area as turfArea,
@@ -19,12 +16,18 @@ import {
   transformRotate as turfTransformRotate,
 } from '@turf/turf'
 
-import { addHumusGrid, addBaseMesh, addHumusRaster } from './LayerHandler'
+import { getGeoJSONSource } from '../../common/composables/useMapSoruce'
+import { addHumusGrid, addBaseGrid, addHumusRaster } from '../../common/handler/LayerHandler'
+import { useErrorHandler, createGeospatialError } from '@/errors'
 
-import type { MapMouseEvent, GeoJSONSource, MaplibreRef } from '@/types/maplibre'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
+import { useStore } from '@/stores/store'
+
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import type { ReadRasterResult } from 'geotiff'
-import type { AreaPolygon, BaseGrid, HumusPoints } from '@/types/geom'
+import type { MapLibreMapRef, MapLibreMouseEvent } from '@/types/map.type'
+import type { HumusPointFeatureCollection, BaseGridFeatureCollection } from '@/types/vfm.type'
+import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
 
 /**
  * @param map
@@ -32,11 +35,10 @@ import type { AreaPolygon, BaseGrid, HumusPoints } from '@/types/geom'
  * @returns gridEW メッシュ幅東西方向（m）
  * @returns gridNS メッシュ幅南北方向（m）
  * @returns buffer メッシュの外周バッファー（m）
- * @returns baseMesh
+ * @returns baseGrid
  * @returns onClickField()
  */
-export function useGridHandler(map: MaplibreRef) {
-  const persistStore = usePersistStore()
+export function useGridHandler(map: MapLibreMapRef) {
   const configPersistStore = useConfigPersistStore()
   const store = useStore()
 
@@ -44,18 +46,15 @@ export function useGridHandler(map: MaplibreRef) {
   const gridEW = ref<number>(20)
   const gridNS = ref<number>(20)
   const buffer = ref<number>(0)
-  const humusPoint = ref<HumusPoints>({
+  const humusPoint = ref<HumusPointFeatureCollection>({
     type: 'FeatureCollection',
     features: [],
   })
   const humusRaster = ref<HTMLCanvasElement | undefined>()
   const humusRasterBbox = ref<[number, number, number, number]>([0, 0, 0, 0])
-  const baseMesh = ref<BaseGrid>({
-    type: 'FeatureCollection',
-    features: [] as AreaPolygon[],
-  })
+  const baseGrid = ref<BaseGridFeatureCollection | null>(null)
 
-  const activeFeature = ref<Feature<Polygon, { id: string }>>()
+  const activeFeature = ref<FieldPolygonFeature | null>(null)
 
   const activeFeatureBufferComputed = computed<Feature<Polygon> | undefined>(() => {
     if (!activeFeature.value) return undefined
@@ -71,153 +70,139 @@ export function useGridHandler(map: MaplibreRef) {
 
   // Step2で設定する、回転角度、グリッド幅EW、グリッド幅NS、バッファーを監視
   watch([gridRotationAngle, gridEW, gridNS, buffer], (current, before) => {
-    const currentMap = map?.value
+    const mapInstance = map?.value
+    if (!mapInstance || !activeFeatureBufferComputed.value) return
     const beforeGridRotationAngle = before[0]
 
     // gridRotationAngleの更新前がnullだったら処理中断
-    if (beforeGridRotationAngle === null) {
+    if (beforeGridRotationAngle === null) return
+
+    // ターゲットポリゴンのbbox算出
+    const bbox = turfBbox(activeFeatureBufferComputed.value)
+    // ターゲットポリゴンのbboxの重心を算出（回転中心点）
+    const centroid = turfCentroid(turfBboxPolygon(bbox))
+    // ターゲットポリゴンを回転
+    const target_polygon_rotated = turfTransformRotate(
+      activeFeatureBufferComputed.value,
+      Number(gridRotationAngle.value),
+      {
+        pivot: centroid,
+      },
+    )
+    const turfRotated = turfTransformRotate(
+      drawBaseMeshPolygon(target_polygon_rotated, gridEW.value, gridNS.value),
+      -Number(gridRotationAngle.value),
+      { pivot: centroid },
+    )
+
+    baseGrid.value = turfRotated
+
+    const source = getGeoJSONSource(mapInstance, 'base-grid')
+    if (!source) return
+    source.setData(baseGrid.value)
+  })
+
+  async function onClickField(e: MapLibreMouseEvent) {
+    const mapInstance = map?.value
+    if (!mapInstance) return
+    if (!e.features || e.features.length === 0) return
+
+    activeFeature.value = e.features[0]
+
+    // activeFeatureBufferComputedのundefined処理
+    if (!activeFeatureBufferComputed.value) return
+
+    // activeFeatureのバッファー処理をしたactiveFeatureBufferComputedをさらに10m拡張（境界域の外側の腐植値を取得するため）
+    const activeFeatureBufferExtended = turfBuffer(activeFeatureBufferComputed.value, 0.01, {
+      units: 'kilometers',
+    })
+    if (!activeFeatureBufferExtended) return
+
+    // BoundingBoxを算出。
+    const activeFeatureBufferExtendedBbox = turfBbox(activeFeatureBufferExtended)
+
+    const bbox4326: [number, number, number, number] = [
+      activeFeatureBufferExtendedBbox[0],
+      activeFeatureBufferExtendedBbox[1],
+      activeFeatureBufferExtendedBbox[2],
+      activeFeatureBufferExtendedBbox[3],
+    ]
+
+    humusRasterBbox.value = bbox4326
+
+    // CRSをEPSG:4326からEPSG:3857に変換
+    const minBbox3857 = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[0], bbox4326[1]])
+    const maxBbox3857 = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[2], bbox4326[3]])
+    const bbox3857: [number, number, number, number] = [
+      minBbox3857[0],
+      minBbox3857[1],
+      maxBbox3857[0],
+      maxBbox3857[1],
+    ]
+
+    const cogUrl = import.meta.env.VITE_OM_MAP_URL
+    // COGファイルより腐植値を取得
+    const cogSource = await extractCogSource(cogUrl, bbox3857)
+
+    // 腐植値をラスター画像に変換
+    humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
+
+    // ラスター画像として地図に追加
+    addHumusRaster(mapInstance, humusRaster.value, bbox4326)
+
+    // ポイントデータも保持（グリッド計算用）
+    const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
+
+    if (!activeFeatureBufferComputed.value) {
+      store.alertMessage.alertType = 'Error'
+      store.alertMessage.message = 'ポリゴン処理に失敗しました'
       return
     }
 
-    if (activeFeatureBufferComputed.value && currentMap) {
-      // ターゲットポリゴンのbbox算出
-      const bbox = turfBbox(activeFeatureBufferComputed.value)
-      // ターゲットポリゴンのbboxの重心を算出（回転中心点）
-      const centroid = turfCentroid(turfBboxPolygon(bbox))
-      // ターゲットポリゴンを回転
-      const target_polygon_rotated = turfTransformRotate(
-        activeFeatureBufferComputed.value,
-        Number(gridRotationAngle.value),
-        {
-          pivot: centroid,
-        },
-      )
-      const turfRotated = turfTransformRotate(
-        drawBaseMeshPolygon(target_polygon_rotated, gridEW.value, gridNS.value),
-        -Number(gridRotationAngle.value),
-        { pivot: centroid },
-      )
+    // 拡張ポリゴン内のポイントを抽出
+    const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
 
-      baseMesh.value = turfRotated
-      const sourceData = currentMap.getSource('base-mesh') as GeoJSONSource
-      if (sourceData) {
-        sourceData.setData(baseMesh.value)
-      }
+    // Point のみ抽出（MultiPointを除去）
+    const filteredPoints = rawPoints.features.filter(
+      (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
+    )
+
+    // refに代入（VFM計算用に保持）
+    humusPoint.value = {
+      type: 'FeatureCollection',
+      features: filteredPoints,
     }
-  })
 
-  async function onClickField(e: MapMouseEvent) {
-    if (!e.features || e.features.length === 0) return
-
-    const currentMap = map?.value
-
-    if (currentMap) {
-      const clickedPolygonId = e.features[0].id
-      const selectedFeature = persistStore.featurecollection.features.filter((feature) => {
-        if (feature.properties) {
-          return feature.properties.id === clickedPolygonId
-        } else {
-          // feature.propertiesがnullの際にはfeatureを返す
-          return feature
-        }
-      })
-      activeFeature.value = selectedFeature[0]
-
-      // activeFeatureBufferComputedのundefined処理
-      if (!activeFeatureBufferComputed.value) return
-
-      // activeFeatureのバッファー処理をしたactiveFeatureBufferComputedをさらに10m拡張（境界域の外側の腐植値を取得するため）
-      const activeFeatureBufferExtended = turfBuffer(activeFeatureBufferComputed.value, 0.01, {
-        units: 'kilometers',
-      })
-      if (!activeFeatureBufferExtended) return
-
-      // BoundingBoxを算出。
-      const activeFeatureBufferExtendedBbox = turfBbox(activeFeatureBufferExtended)
-
-      const bbox4326: [number, number, number, number] = [
-        activeFeatureBufferExtendedBbox[0],
-        activeFeatureBufferExtendedBbox[1],
-        activeFeatureBufferExtendedBbox[2],
-        activeFeatureBufferExtendedBbox[3],
-      ]
-
-      humusRasterBbox.value = bbox4326
-
-      // CRSをEPSG:4326からEPSG:3857に変換
-      const minBbox3857 = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[0], bbox4326[1]])
-      const maxBbox3857 = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[2], bbox4326[3]])
-      const bbox3857: [number, number, number, number] = [
-        minBbox3857[0],
-        minBbox3857[1],
-        maxBbox3857[0],
-        maxBbox3857[1],
-      ]
-
-      const cogUrl = import.meta.env.VITE_OM_MAP_URL
-      // COGファイルより腐植値を取得
-      const cogSource = await extractCogSource(cogUrl, bbox3857)
-
-      // 腐植値をラスター画像に変換
-      humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
-
-      // ラスター画像として地図に追加
-      addHumusRaster(currentMap, humusRaster.value, bbox4326)
-
-      // ポイントデータも保持（グリッド計算用）
-      const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
-
-      if (!activeFeatureBufferComputed.value) {
-        store.alertMessage.alertType = 'Error'
-        store.alertMessage.message = 'ポリゴン処理に失敗しました'
-        return
-      }
-
-      // 拡張ポリゴン内のポイントを抽出
-      const rawPoints = turfPointsWithinPolygon(humusPointGridBbox, activeFeatureBufferExtended)
-
-      // Point のみ抽出（MultiPointを除去）
-      const filteredPoints = rawPoints.features.filter(
-        (f): f is Feature<Point, { humus: number }> => f.geometry.type === 'Point',
-      )
-
-      // refに代入（VFM計算用に保持）
-      humusPoint.value = {
-        type: 'FeatureCollection',
-        features: filteredPoints,
-      }
-
-      if (configPersistStore.humusSymbolIsVisible) {
-        // 腐植値のシンボル表示
-        addHumusGrid(currentMap, humusPoint.value)
-      }
-
-      // クリックしたポリゴンのbboxの重心を算出（回転中心点）
-      const centroid = turfCentroid(turfBboxPolygon(bbox4326))
-
-      // クリックしたポリゴン形状にフィットするbboxの回転角を算出
-      const vraDeg = fitRotatedBboxDeg(activeFeatureBufferComputed.value)
-      gridRotationAngle.value = vraDeg
-
-      // クリックしたポリゴンを回転
-      const targetPolygonRotated = turfTransformRotate(
-        activeFeatureBufferComputed.value,
-        Number(vraDeg),
-        {
-          pivot: centroid,
-        },
-      )
-      // 回転したターゲットポリゴンに基づきメッシュ作成し元の位置に戻す
-      const targetPolygonReRotated = turfTransformRotate(
-        drawBaseMeshPolygon(targetPolygonRotated, gridEW.value, gridNS.value),
-        -Number(vraDeg),
-        { pivot: centroid },
-      )
-
-      baseMesh.value = targetPolygonReRotated
-
-      addBaseMesh(currentMap, baseMesh.value)
+    if (configPersistStore.humusSymbolIsVisible) {
+      // 腐植値のシンボル表示
+      addHumusGrid(mapInstance, humusPoint.value)
     }
+
+    // クリックしたポリゴンのbboxの重心を算出（回転中心点）
+    const centroid = turfCentroid(turfBboxPolygon(bbox4326))
+
+    // クリックしたポリゴン形状にフィットするbboxの回転角を算出
+    const vraDeg = fitRotatedBboxDeg(activeFeatureBufferComputed.value)
+    gridRotationAngle.value = vraDeg
+
+    // クリックしたポリゴンを回転
+    const targetPolygonRotated = turfTransformRotate(
+      activeFeatureBufferComputed.value,
+      Number(vraDeg),
+      {
+        pivot: centroid,
+      },
+    )
+    // 回転したターゲットポリゴンに基づきメッシュ作成し元の位置に戻す
+    const targetPolygonReRotated = turfTransformRotate(
+      drawBaseMeshPolygon(targetPolygonRotated, gridEW.value, gridNS.value),
+      -Number(vraDeg),
+      { pivot: centroid },
+    )
+
+    baseGrid.value = targetPolygonReRotated
+    addBaseGrid(mapInstance, baseGrid.value)
+    // })
   }
 
   // クリックしたポリゴン形状にフィットするbboxの回転角を算出
@@ -346,21 +331,79 @@ export function useGridHandler(map: MaplibreRef) {
     url: string,
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
-    const tiff = await fromUrl(url)
-    const pool = new Pool()
-    const cogSource = await tiff.readRasters({
-      bbox: bbox3857,
-      samples: [0], // 取得するバンドを指定
-      interleave: true,
-      pool,
-    }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
-    return cogSource
+    const { handleError } = useErrorHandler()
+
+    try {
+      const tiff = await fromUrl(url)
+      const pool = new Pool()
+      const cogSource = await tiff.readRasters({
+        bbox: bbox3857,
+        samples: [0], // 取得するバンドを指定
+        interleave: true,
+        pool,
+      }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
+
+      // 成功時もPoolを破棄
+      if (pool && 'destroy' in pool && typeof pool.destroy === 'function') {
+        pool.destroy()
+      }
+
+      return cogSource
+    } catch (error) {
+      // エラーの詳細情報を収集
+      const isError = error instanceof Error
+      const errorDetails = {
+        userAgent: navigator.userAgent,
+        cogUrl: url,
+        bbox: bbox3857,
+        errorType: isError ? error.constructor.name : typeof error,
+        errorMessage: isError ? error.message : String(error),
+        aggregateErrors:
+          isError && 'errors' in error && Array.isArray(error.errors)
+            ? error.errors.map((e: Error) => ({
+                type: e?.constructor?.name || 'Unknown',
+                message: e?.message || 'No message',
+                stack: e?.stack || 'No stack trace',
+              }))
+            : undefined,
+        timestamp: new Date().toISOString(),
+      }
+
+      // エラーハンドラーを使用してユーザーに通知
+      const appError = createGeospatialError(
+        `COGデータ読み込み: ${isError ? error.message : String(error)}`,
+        isError ? error : new Error(String(error)),
+        errorDetails,
+      )
+      handleError(appError)
+
+      try {
+        const tiff = await fromUrl(url)
+        const cogSource = await tiff.readRasters({
+          bbox: bbox3857,
+          samples: [0],
+          interleave: true,
+          // poolを指定しない
+        })
+        return cogSource
+      } catch (retryError) {
+        // リトライも失敗した場合
+        const isRetryError = retryError instanceof Error
+        const retryAppError = createGeospatialError(
+          `COGデータ読み込み再試行失敗: ${isRetryError ? retryError.message : String(retryError)}`,
+          isRetryError ? retryError : new Error(String(retryError)),
+          { ...errorDetails, retry: true },
+        )
+        handleError(retryAppError)
+        throw retryError // エラーを上位に伝播
+      }
+    }
   }
 
   function getHumusPointGridBbox(
     bbox: [number, number, number, number],
     cogSource: ReadRasterResult,
-  ): FeatureCollection<Point, { humus: number }> {
+  ): HumusPointFeatureCollection {
     const bboxMinLng = bbox[0]
     const bboxMinLat = bbox[1]
     const bboxMaxLng = bbox[2]
@@ -527,7 +570,7 @@ export function useGridHandler(map: MaplibreRef) {
     gridEW,
     gridNS,
     buffer,
-    baseMesh,
+    baseGrid,
     humusPoint,
     humusRaster,
     humusRasterBbox,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { dialogType } from '@/types/maplibre'
+import type { DialogType } from '@/types/common.type'
 
 const gridParams = {
   rotationAngle: { min: 0, max: 90 },
@@ -10,7 +10,7 @@ const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
   variableFertilizationRangeRate: { min: 1, max: 99 },
 }
-const dialogName = defineModel<dialogType>('dialogName')
+const dialogName = defineModel<DialogType>('dialogName')
 const inputNumber = ref('0')
 const negativeSign = ref(false)
 
@@ -68,7 +68,7 @@ const inputMinNumber = computed(() => {
 })
 
 // 入力内容の確定
-const inputNum = (currentDialog: dialogType | undefined) => {
+const inputNum = (currentDialog: DialogType | undefined) => {
   // undefinedハンドリング
   if (!currentDialog) return
 
