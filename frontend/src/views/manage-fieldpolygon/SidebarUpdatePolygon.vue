@@ -136,7 +136,7 @@ const handleSelected = async (isSelect: boolean) => {
   </div>
 
   <InputMemoDialog
-    message="ポリゴンを登録しますか"
+    message="ポリゴンを更新しますか"
     :isOpen="isOpenDialog!"
     v-model:memo="memo"
     @selected="handleSelected"

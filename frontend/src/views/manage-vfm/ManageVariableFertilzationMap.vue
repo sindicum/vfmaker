@@ -83,6 +83,7 @@ const currentGridInfo = ref<{
 } | null>(null)
 const currentFertilizerAmount = ref<number | null>(null)
 
+const isShowStep = ref(false)
 const showStep1 = computed(() => currentStep.value === 1)
 const showStep2 = computed(() => currentStep.value === 2)
 const showStep3 = computed(() => currentStep.value === 3)
@@ -108,7 +109,6 @@ const isLoadIndexedDB = ref(false)
 
 onBeforeMount(async () => {
   const res = await readAllFields()
-
   featureCollection.value = res
   vfms.value = await readAllVfmMaps()
   isLoadIndexedDB.value = true
@@ -138,9 +138,16 @@ onUnmounted(() => {
   activeVfm.value = null
   showRealtimeVfm.value = false
   currentFertilizerAmount.value = null
+  isShowStep.value = false
   isLoadIndexedDB.value = false
   featureCollection.value = { type: 'FeatureCollection', features: [] }
   vfms.value = []
+})
+
+watch(isLoadIndexedDB, (current) => {
+  if (current && featureCollection.value.features.length > 0) {
+    isShowStep.value = true
+  }
 })
 
 function handleMapLoad() {
@@ -494,58 +501,15 @@ const selectedDialog = (selected: boolean) => {
         <h2 class="text-lg font-bold text-gray-800 text-center">可変施肥マップ表示・出力</h2>
       </div>
 
-      <div v-if="!showRealtimeVfm">
-        <div class="text-center text-rose-600 my-3">{{ message }}</div>
-        <div
-          v-if="showStep1"
-          :class="[
-            isDesktop ? 'max-h-[calc(100vh-18rem)]' : 'max-h-44 sm:max-h-64',
-            'overflow-y-auto',
-          ]"
-        >
-          <table class="w-full text-center table-fixed">
-            <thead class="sticky top-0 bg-gray-50 z-10">
-              <tr class="text-xs font-medium text-gray-500">
-                <th class="px-3 py-2 w-1/4">ポリゴン<br />面積</th>
-                <th class="px-3 py-2 w-1/4">作成<br />マップ数</th>
-                <th class="px-3 py-2 w-1/2">ポリゴン<br />メモ</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr
-                v-for="(feature, index) in featureCollection.features"
-                :key="index"
-                :class="[
-                  activeFeatureUuid === feature.properties.uuid
-                    ? 'bg-amber-50'
-                    : 'cursor-pointer transition-colors duration-200 bg-white',
-                ]"
-                @click="fitToPolygon(feature)"
-                title="クリックして地図上の位置を表示"
-              >
-                <td class="px-3 py-2">
-                  <div class="flex items-center justify-center">
-                    {{ feature.properties.area_are }} a
-                  </div>
-                </td>
-                <td class="px-3 py-2">
-                  <div
-                    :class="[
-                      isDesktop ? 'flex-col space-y-1' : 'flex-row space-x-1 justify-center',
-                      'flex items-center',
-                    ]"
-                  >
-                    {{ feature.properties.vfm_count }}
-                  </div>
-                </td>
-                <td class="px-3 py-2">{{ feature.properties.memo }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div v-show="!isShowStep">
+        <div class="text-center text-rose-600 my-3">圃場ポリゴンが登録されていません</div>
+      </div>
 
-        <div v-if="showStep2">
+      <div v-show="isShowStep">
+        <div v-if="!showRealtimeVfm">
+          <div class="text-center text-rose-600 my-3">{{ message }}</div>
           <div
+            v-if="showStep1"
             :class="[
               isDesktop ? 'max-h-[calc(100vh-18rem)]' : 'max-h-44 sm:max-h-64',
               'overflow-y-auto',
@@ -554,60 +518,109 @@ const selectedDialog = (selected: boolean) => {
             <table class="w-full text-center table-fixed">
               <thead class="sticky top-0 bg-gray-50 z-10">
                 <tr class="text-xs font-medium text-gray-500">
-                  <th class="px-3 py-2 w-1/4 lg:w-1/3">10aあたり<br />施肥量</th>
-                  <th class="px-3 py-2 w-1/4 lg:w-1/3">総施肥量</th>
-                  <th class="px-3 py-2 w-1/2 lg:w-1/3">VFマップ<br />メモ</th>
+                  <th class="px-3 py-2 w-1/4">ポリゴン<br />面積</th>
+                  <th class="px-3 py-2 w-1/4">作成<br />マップ数</th>
+                  <th class="px-3 py-2 w-1/2">ポリゴン<br />メモ</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
                 <tr
-                  v-for="(vfm, index) in vfms"
+                  v-for="(feature, index) in featureCollection.features"
                   :key="index"
                   :class="[
-                    activeVfmIndex === index
+                    activeFeatureUuid === feature.properties.uuid
                       ? 'bg-amber-50'
                       : 'cursor-pointer transition-colors duration-200 bg-white',
                   ]"
-                  @click="addVfm(vfm.vfm, vfm.id, index)"
-                  v-show="vfm.uuid === activeFeatureUuid"
+                  @click="fitToPolygon(feature)"
+                  title="クリックして地図上の位置を表示"
                 >
-                  <td class="px-3 py-2">{{ vfm.amount_10a }} kg</td>
-                  <td class="px-3 py-2">{{ vfm.total_amount }} kg</td>
-                  <td class="px-3 py-2">{{ vfm.memo }}</td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center justify-center">
+                      {{ feature.properties.area_are }} a
+                    </div>
+                  </td>
+                  <td class="px-3 py-2">
+                    <div
+                      :class="[
+                        isDesktop ? 'flex-col space-y-1' : 'flex-row space-x-1 justify-center',
+                        'flex items-center',
+                      ]"
+                    >
+                      {{ feature.properties.vfm_count }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2">{{ feature.properties.memo }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
 
-        <div v-if="showStep3">
-          <div>
-            <select
-              class="w-full p-3 rounded-md bg-white ring-1 ring-inset ring-gray-300 text-center"
-              v-model="selectedAction"
+          <div v-if="showStep2">
+            <div
+              :class="[
+                isDesktop ? 'max-h-[calc(100vh-18rem)]' : 'max-h-44 sm:max-h-64',
+                'overflow-y-auto',
+              ]"
             >
-              <option value="exportVfm">マップ出力</option>
-              <option value="runRealtimeVfm">現在位置の施肥量表示</option>
-              <option class="bg-red-600" value="deleteVfm">削除</option>
-            </select>
+              <table class="w-full text-center table-fixed">
+                <thead class="sticky top-0 bg-gray-50 z-10">
+                  <tr class="text-xs font-medium text-gray-500">
+                    <th class="px-3 py-2 w-1/4 lg:w-1/3">10aあたり<br />施肥量</th>
+                    <th class="px-3 py-2 w-1/4 lg:w-1/3">総施肥量</th>
+                    <th class="px-3 py-2 w-1/2 lg:w-1/3">VFマップ<br />メモ</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr
+                    v-for="(vfm, index) in vfms"
+                    :key="index"
+                    :class="[
+                      activeVfmIndex === index
+                        ? 'bg-amber-50'
+                        : 'cursor-pointer transition-colors duration-200 bg-white',
+                    ]"
+                    @click="addVfm(vfm.vfm, vfm.id, index)"
+                    v-show="vfm.uuid === activeFeatureUuid"
+                  >
+                    <td class="px-3 py-2">{{ vfm.amount_10a }} kg</td>
+                    <td class="px-3 py-2">{{ vfm.total_amount }} kg</td>
+                    <td class="px-3 py-2">{{ vfm.memo }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          <div v-if="showStep3">
+            <div>
+              <select
+                class="w-full p-3 rounded-md bg-white ring-1 ring-inset ring-gray-300 text-center"
+                v-model="selectedAction"
+              >
+                <option value="exportVfm">マップ出力</option>
+                <option value="runRealtimeVfm">現在位置の施肥量表示</option>
+                <option class="bg-red-600" value="deleteVfm">削除</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ボタンの共通化 -->
+          <StepNavigationButtons
+            :buttonConfig="buttonConfig"
+            :nextStep="nextStep"
+            :previousStep="previousStep"
+          />
         </div>
 
-        <!-- ボタンの共通化 -->
-        <StepNavigationButtons
-          :buttonConfig="buttonConfig"
-          :nextStep="nextStep"
-          :previousStep="previousStep"
-        />
-      </div>
-
-      <!-- リアルタイム施肥量表示タブのコンテンツ -->
-      <div v-else>
-        <RealtimeFertilizationDisplay
-          :currentFertilizerAmount="currentFertilizerAmount"
-          :currentGridInfo="currentGridInfo"
-          @stopRealtimeVfm="stopRealtimeVfm"
-        />
+        <!-- リアルタイム施肥量表示タブのコンテンツ -->
+        <div v-else>
+          <RealtimeFertilizationDisplay
+            :currentFertilizerAmount="currentFertilizerAmount"
+            :currentGridInfo="currentGridInfo"
+            @stopRealtimeVfm="stopRealtimeVfm"
+          />
+        </div>
       </div>
     </div>
 

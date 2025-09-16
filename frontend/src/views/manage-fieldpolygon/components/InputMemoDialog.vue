@@ -35,7 +35,7 @@ watch(
   <div v-show="props.isOpen" class="fixed top-0 left-0 w-screen h-screen bg-black/30 z-50">
     <div class="flex items-center justify-center h-full">
       <div class="bg-slate-100 w-80 h-52 rounded-md">
-        <div class="text-center pt-8 pb-4">ポリゴンを登録しますか？</div>
+        <div class="text-center pt-8 pb-4">{{ props.message }}</div>
         <input
           v-model="memo"
           ref="memoRef"
