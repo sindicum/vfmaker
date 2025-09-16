@@ -27,7 +27,7 @@ import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import type { ReadRasterResult } from 'geotiff'
 import type { MapLibreMapRef, MapLibreMouseEvent } from '@/types/map.type'
 import type { HumusPointFeatureCollection, BaseGridFeatureCollection } from '@/types/vfm.type'
-import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
+import type { FieldPolygonFeatureCollection, FieldPolygonFeature } from '@/types/fieldpolygon.type'
 
 /**
  * @param map
@@ -42,6 +42,12 @@ export function useGridHandler(map: MapLibreMapRef) {
   const configPersistStore = useConfigPersistStore()
   const store = useStore()
 
+  const baseFeatureCollection: FieldPolygonFeatureCollection = {
+    type: 'FeatureCollection',
+    features: [],
+  }
+  const loadedFeatureCollection = ref(baseFeatureCollection)
+  const activeFeature = ref<FieldPolygonFeature | null>(null)
   const gridRotationAngle = ref<number | null>(null)
   const gridEW = ref<number>(20)
   const gridNS = ref<number>(20)
@@ -53,8 +59,6 @@ export function useGridHandler(map: MapLibreMapRef) {
   const humusRaster = ref<HTMLCanvasElement | undefined>()
   const humusRasterBbox = ref<[number, number, number, number]>([0, 0, 0, 0])
   const baseGrid = ref<BaseGridFeatureCollection | null>(null)
-
-  const activeFeature = ref<FieldPolygonFeature | null>(null)
 
   const activeFeatureBufferComputed = computed<Feature<Polygon> | undefined>(() => {
     if (!activeFeature.value) return undefined
@@ -107,7 +111,12 @@ export function useGridHandler(map: MapLibreMapRef) {
     if (!mapInstance) return
     if (!e.features || e.features.length === 0) return
 
-    activeFeature.value = e.features[0]
+    const activeFeatureId = e.features[0].properties.id
+    const filteredFeature = loadedFeatureCollection.value.features.filter(
+      (f) => f.properties.id === activeFeatureId,
+    )
+
+    activeFeature.value = filteredFeature[0]
 
     // activeFeatureBufferComputedのundefined処理
     if (!activeFeatureBufferComputed.value) return
@@ -565,6 +574,7 @@ export function useGridHandler(map: MapLibreMapRef) {
   }
 
   return {
+    loadedFeatureCollection,
     activeFeature,
     gridRotationAngle,
     gridEW,

@@ -67,6 +67,7 @@ const isInEdit = ref(false)
 const activeFeatureId = ref<number | null>(null)
 
 const {
+  loadedFeatureCollection,
   activeFeature,
   gridRotationAngle,
   gridEW,
@@ -104,11 +105,24 @@ onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  mapInstance.on('style.load', async () => {
+  mapInstance.on('load', async () => {
     addSource(mapInstance, fieldPolygonFeatureCollection.value)
     addLayer(mapInstance)
     mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
   })
+
+  // const setupFieldLayers = () => {
+  //   if (!mapInstance.getSource('registeredFields')) {
+  //   }
+  //   mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
+  // }
+
+  // // マップスタイルが既に読み込まれているか確認
+  // if (mapInstance.isStyleLoaded()) {
+  //   setupFieldLayers()
+  // } else {
+  //   mapInstance.once('style.load', setupFieldLayers)
+  // }
 })
 
 onBeforeUnmount(() => {
@@ -131,6 +145,12 @@ onBeforeUnmount(() => {
 
   isLoadIndexedDB.value = false
   fieldPolygonFeatureCollection.value = { type: 'FeatureCollection', features: [] }
+})
+
+watch(isLoadIndexedDB, (current) => {
+  if (current) {
+    loadedFeatureCollection.value = fieldPolygonFeatureCollection.value
+  }
 })
 
 watch(step1Status, (currentStatus, previousStatus) => {

@@ -39,7 +39,7 @@ onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
-  mapInstance.on('style.load', () => {
+  mapInstance.on('load', () => {
     addSource(mapInstance, fieldPolygonFeatureCollection.value)
     addLayer(mapInstance)
   })
