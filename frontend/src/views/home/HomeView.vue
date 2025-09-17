@@ -2,13 +2,14 @@
 import { watch, inject, ref, onBeforeUnmount, onMounted, onBeforeMount } from 'vue'
 
 import MapBase from '@/components/map/MapBase.vue'
-// import NoticeDialog from './components/NoticeDialog.vue'
+import NoticeDialog from './components/NoticeDialog.vue'
 import { useHumusCog } from '@/components/common/composables/useHumusCog'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { addLayer, addSource, removeLayer, removeSource } from '../common/handler/LayerHandler'
 
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 import { useStore } from '@/stores/store'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
 
 import type { ShallowRef } from 'vue'
 import type { MapLibreMap } from '@/types/map.type'
@@ -18,10 +19,12 @@ const map = inject<ShallowRef<MapLibreMap | null>>('mapkey')
 const { addCog, removeCog } = useHumusCog(map)
 const isCogLayerVisible = ref(false)
 const store = useStore()
+const configPersistStore = useConfigPersistStore()
 
 const { isDesktop } = useControlScreenWidth()
 const { readAllFields } = useStoreHandler()
-// const isDialogOpen = ref(true)
+
+const isDialogOpen = ref(false)
 
 const baseFeatureCollection: FieldPolygonFeatureCollection = {
   type: 'FeatureCollection',
@@ -33,6 +36,10 @@ const isLoadIndexedDB = ref(false)
 onBeforeMount(async () => {
   fieldPolygonFeatureCollection.value = await readAllFields()
   isLoadIndexedDB.value = true
+
+  if (configPersistStore.isNoticeVisible) {
+    isDialogOpen.value = true
+  }
 })
 
 onMounted(() => {
@@ -129,6 +136,6 @@ watch(isCogLayerVisible, async () => {
         <div class="ml-1">150mg/kg</div>
       </div>
     </div>
-    <!-- <NoticeDialog v-model:is-dialog-open="isDialogOpen" /> -->
+    <NoticeDialog v-model:is-dialog-open="isDialogOpen" />
   </main>
 </template>
