@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useConfigPersistStore } from '@/stores/configPersistStore'
+
+const configPersistStore = useConfigPersistStore()
 const isDialogOpen = defineModel('isDialogOpen')
 </script>
 
@@ -23,13 +26,32 @@ const isDialogOpen = defineModel('isDialogOpen')
               </svg>
             </button>
           </div>
-          <div class="text-sm text-gray-600 space-y-3">
+          <div class="text-sm text-gray-600 space-y-3 py-4">
             <ul class="list-disc list-outside space-y-2 ml-2">
               <li>
-                現在は無償サービスのため、圃場登録数および可変施肥マップの登録上限は5件に制限しております。
+                本サービスに登録した圃場情報や可変施肥マップは、Webブラウザのストレージ（indexedDB）に保存されます。サーバーに保存されません。
               </li>
-              <li>ご要望をふまえ、機能改善に努めてまいります</li>
+              <li>
+                ストレージに保存できる登録圃場数および可変施肥マップ数は現在10件までに制限してます。
+              </li>
+              <li>
+                ブラウザのストレージは、利用状況により失われる可能性があることを了承お願いいたします。
+              </li>
+              <li>利用にあたり「本サイトについて」を予めご確認・ご了承のうえご利用願います。</li>
             </ul>
+          </div>
+          <div class="my-6">
+            <div class="flex flex-col gap-2 ml-2">
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  :checked="!configPersistStore.isNoticeVisible"
+                  @change="configPersistStore.noticeVisibleChanged"
+                  class="w-4 h-4 accent-indigo-600"
+                />
+                <span>今後表示しない</span>
+              </label>
+            </div>
           </div>
           <div class="mt-6 flex justify-center">
             <button

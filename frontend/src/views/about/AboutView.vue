@@ -29,7 +29,7 @@ const handleResetConfirm = (confirmed: boolean) => {
     store.setMessage('Info', 'アプリケーションを初期化しました。')
     setTimeout(() => {
       window.location.reload()
-    }, 1000)
+    }, 500)
   }
 }
 </script>
