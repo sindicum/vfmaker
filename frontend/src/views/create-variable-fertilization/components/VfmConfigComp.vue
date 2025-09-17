@@ -50,20 +50,20 @@ const closeDialog = () => {
             <label class="flex items-center gap-2">
               <input
                 type="radio"
-                :checked="configPersistStore.fiveStepsFertilization === true"
-                @change="configPersistStore.fiveStepsFertilizationChanged"
-                class="w-4 h-4 accent-indigo-600"
-              />
-              <span>5段階</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input
-                type="radio"
                 :checked="configPersistStore.fiveStepsFertilization === false"
                 @change="configPersistStore.fiveStepsFertilizationChanged"
                 class="w-4 h-4 accent-indigo-600"
               />
               <span>無段階</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                :checked="configPersistStore.fiveStepsFertilization === true"
+                @change="configPersistStore.fiveStepsFertilizationChanged"
+                class="w-4 h-4 accent-indigo-600"
+              />
+              <span>5段階</span>
             </label>
           </div>
         </div>

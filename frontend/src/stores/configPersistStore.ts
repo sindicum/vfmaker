@@ -5,7 +5,7 @@ export const useConfigPersistStore = defineStore(
   'configPersistStore',
   () => {
     const outsideMeshClip = ref(true)
-    const fiveStepsFertilization = ref(true)
+    const fiveStepsFertilization = ref(false)
     const humusSymbolIsVisible = ref(false)
     const missingHumusDataInterpolation = ref(true)
 
