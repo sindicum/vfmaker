@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/home/HomeView.vue'
 import ManageFieldPolygon from '../views/manage-fieldpolygon/ManageFieldPolygonView.vue'
-import CreateVariableFertilizationMap from '@/views/create-variable-fertilization/CreateVariableFertilizationView.vue'
+import CreateVariableFertilizationMap from '@/views/create-vfm/CreateVariableFertilizationView.vue'
 import ManageVariableFertilizationMap from '@/views/manage-vfm/ManageVariableFertilzationMap.vue'
 import AboutView from '@/views/about/AboutView.vue'
 

@@ -66,6 +66,7 @@ const executeSave = async () => {
     .then(() => {
       step3Status.value = 'complete'
       vfmMemo.value = ''
+      store.setMessage('Info', '可変施肥マップを保存しました')
     })
     .catch((error) => {
       store.setMessage('Error', error)
