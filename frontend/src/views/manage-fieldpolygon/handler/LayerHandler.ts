@@ -18,7 +18,7 @@ export const LINE_LAYER_NAME = 'editLineLayer'
 export const FILL_LAYER_NAME = 'editFillLayer'
 export const PMTILES = {
   url: import.meta.env.VITE_PMTILES_URL,
-  source: '2024hokkaido_fudepolygon',
+  source: '2025hokkaido_fudepolygon',
   sourceId: 'fude-polygon-pmtiles',
   lineLayerId: 'pmTileLineLayerId',
   fillLayerId: 'pmTileFillLayerId',

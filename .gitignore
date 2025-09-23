@@ -30,3 +30,5 @@ frontend/public/*
 temp
 CLAUDE.md
 *.drawio
+
+backend/venv

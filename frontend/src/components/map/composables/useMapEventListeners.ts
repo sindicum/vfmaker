@@ -28,7 +28,9 @@ export function useMapEventListeners({ mapStyleProperty, map }: UseMapEventListe
           styleUrl: mapStyleProperty[mapStyleIndex].url,
           center: [persistStore.centerPosition.lng, persistStore.centerPosition.lat],
           zoom: persistStore.centerPosition.zoom,
-          mapError: e,
+          errorType: e.type,
+          errorMessage: e.error?.message || 'Unknown map error',
+          sourceId: e.sourceId || null,
         }),
       )
     })
