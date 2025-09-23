@@ -4,7 +4,7 @@
   <div class="w-full lg:w-5xl h-full mx-4 mt-8 mb-32 px-4">
     <h1 class="text-3xl font-bold text-center text-amber-900 my-4 sm:my-10">サイト開発技術</h1>
     <div class="my-4 sm:my-18 mx-2 sm:mx-6 leading-loose text-sm sm:text-base">
-      主にWebエンジニア向けに、当サイトで利用している技術の概要についてご紹介します。
+      当サイトで利用している技術の概要についてご紹介します。
     </div>
     <ul class="list-decimal list-inside">
       <div class="my-8">
@@ -42,10 +42,10 @@
           PMTiles（Cloud Optimized Vector Tiles）
         </li>
         <div class="leading-loose mx-2 sm:mx-6 text-sm sm:text-base">
-          圃場データの登録時に、農水省が公開している筆ポリゴン（圃場情報）を利用可能としています。
-          元データはGeoJSON形式ですが、 そのままMaplibre GL
-          JSで表示するとポリゴン数が多く描画パフォーマンスに課題があるため、
-          PMTiles形式に変換しています。
+          圃場データの登録にあたり、筆ポリゴンを活用できます。
+          元データは農水省が公開している「筆ポリゴンデータ（2025年度公開）」でありGeoJSON形式ですが、
+          そのままMaplibre GL JSで表示するとポリゴン数が多く描画パフォーマンスに課題があるため、
+          PMTiles形式に加工・変換したデータをご利用できます。
           <br />
           GeoJSONからの変換にはtippecanoeを使用し、生成されたPMTilesファイルはCOGと同様にAWS
           S3上でホスティングしています。
