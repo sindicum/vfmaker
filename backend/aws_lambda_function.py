@@ -45,23 +45,30 @@ def lambda_handler(event, context):
         else:
             geojson = event  # テスト用（Lambdaコンソールから）
 
-        base_path = "/tmp/output"
+        base_path = "/tmp/vfmap"
         w = shapefile.Writer(base_path, shapeType=shapefile.POLYGON)
-        w.field("VF_AMT", "N")
+        w.field("VFAR", "N", size=18, decimal=0)
 
         for feature in geojson["features"]:
             coords = feature["geometry"]["coordinates"]
-            applicationAmount = feature["properties"].get("amount_fertilization_unit", 0) * 10
-            w.poly(coords)
+            applicationAmount = int(feature["properties"].get("amount_fertilization_unit", 0) * 10)
+e
+            w.poly(reversed_coords)
             w.record(applicationAmount)
 
         w.close()
 
-        zip_path = "/tmp/output.zip"
+        # PRJファイル（投影情報）を作成
+        prj_path = f"{base_path}.prj"
+        wgs84_wkt = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]'
+        with open(prj_path, 'w') as prj_file:
+            prj_file.write(wgs84_wkt)
+
+        zip_path = "/tmp/vfmap.zip"
         with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for ext in ['shp', 'shx', 'dbf']:
+            for ext in ['shp', 'shx', 'dbf', 'prj']:
                 filepath = f"{base_path}.{ext}"
-                filename = f"output.{ext}"
+                filename = f"vfmap.{ext}"
                 zipf.write(filepath, arcname=filename)
 
         bucket_name = 'vfmaker'
