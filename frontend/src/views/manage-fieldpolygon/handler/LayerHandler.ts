@@ -97,7 +97,7 @@ export function addPMTilesSource(map: MapLibreMap) {
     type: 'vector',
     url: `pmtiles://${PMTILES.url}`,
     minzoom: 8,
-    maxzoom: 17,
+    maxzoom: 16,
   })
 }
 
