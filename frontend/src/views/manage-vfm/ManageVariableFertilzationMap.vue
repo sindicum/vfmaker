@@ -226,7 +226,7 @@ const exportVfm = async () => {
       },
       body: JSON.stringify(payload),
     })
-
+    // console.log(JSON.stringify(payload))
     if (!res.ok) {
       // HTTPエラーハンドリング
       handleError(

@@ -208,10 +208,8 @@ export function useGridHandler(map: MapLibreMapRef) {
       -Number(vraDeg),
       { pivot: centroid },
     )
-
     baseGrid.value = targetPolygonReRotated
     addBaseGrid(mapInstance, baseGrid.value)
-    // })
   }
 
   // クリックしたポリゴン形状にフィットするbboxの回転角を算出
@@ -309,11 +307,12 @@ export function useGridHandler(map: MapLibreMapRef) {
           SE_coords = turfPoint([bbox_NE_coords[0], SW_coords[1]]).geometry.coordinates
         }
 
+        // 単位ポリゴンを作成（頂点は反時計回り）
         const mesh_feature: Feature<Polygon, { area: number }> = {
           type: 'Feature',
           geometry: {
             type: 'Polygon',
-            coordinates: [[NW_coords, NE_coords, SE_coords, SW_coords, NW_coords]],
+            coordinates: [[SW_coords, SE_coords, NE_coords, NW_coords, SW_coords]],
           },
           properties: {
             area: 0,
