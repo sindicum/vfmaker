@@ -188,6 +188,29 @@ const exportVfm = async () => {
   const vfm = activeVfm.value
   if (!vfm) return
 
+  const currentPolygon = featureCollection.value.features.find(
+    (feature) => feature.properties?.uuid === activeFeatureUuid.value,
+  )
+
+  // ポリゴン情報が取得できない場合のエラーハンドリング
+  if (!isPolyLike(currentPolygon)) {
+    handleError(
+      createGeneralError(
+        'Current polygon not found',
+        '現在のポリゴン情報が取得できません。',
+        undefined,
+        new Error('Current polygon is undefined or invalid'),
+        { operation: 'exportVfm', activeFeatureUuid: activeFeatureUuid.value },
+      ),
+    )
+    return
+  }
+
+  const payload = {
+    vfm: vfm,
+    field_polygon: currentPolygon,
+  }
+
   // 可変施肥マップの出力処理
   const url = import.meta.env.VITE_API_URL
   const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
@@ -201,7 +224,7 @@ const exportVfm = async () => {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
       },
-      body: JSON.stringify(vfm),
+      body: JSON.stringify(payload),
     })
 
     if (!res.ok) {
