@@ -10,7 +10,9 @@ import {
   onBeforeMount,
 } from 'vue'
 import MapBase from '@/components/map/MapBase.vue'
+import ExportFileConfigComp from './components/ExportFileConfigComp.vue'
 import { useStore } from '@/stores/store'
+import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
 
 import {
@@ -18,6 +20,7 @@ import {
   booleanPointInPolygon as turfBooleanPointInPolygon,
   point as turfPoint,
 } from '@turf/turf'
+import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
 
 import {
   addSource,
@@ -50,6 +53,7 @@ import type { VfmMapDB } from '@/types/indexedDb.type'
 
 const { isDesktop } = useControlScreenWidth()
 const store = useStore()
+const configPersistStore = useConfigPersistStore()
 const { handleError } = useErrorHandler()
 
 const { readAllFields, readAllVfmMaps, deleteVfmMap } = useStoreHandler()
@@ -82,6 +86,9 @@ const currentGridInfo = ref<{
   vfmId: string
 } | null>(null)
 const currentFertilizerAmount = ref<number | null>(null)
+
+// 設定ダイアログの表示
+const isOpenConfig = ref(false)
 
 const isShowStep = ref(false)
 const showStep1 = computed(() => currentStep.value === 1)
@@ -211,10 +218,14 @@ const exportVfm = async () => {
     field_polygon: currentPolygon,
   }
 
-  // 可変施肥マップの出力処理
-  const url = import.meta.env.VITE_API_URL
+  const exportFileType: 'shp' | 'iso-xml' = configPersistStore.exportFileType
+  const shpUrl = import.meta.env.VITE_API_URL
+  const isoXmlUrl = import.meta.env.VITE_API_ISOXML_URL
+
+  const url = exportFileType === 'shp' ? shpUrl : isoXmlUrl
   const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
 
+  // 可変施肥マップの出力処理
   try {
     store.isLoading = true
 
@@ -520,8 +531,18 @@ const selectedDialog = (selected: boolean) => {
         'block z-20',
       ]"
     >
+      <div :class="[isDesktop ? 'top-10 right-8 ' : 'top-2 right-2', 'absolute']">
+        <button
+          class="flex items-center border border-gray-300 rounded bg-gray-200 text-gray-700"
+          @click="isOpenConfig = true"
+        >
+          <Cog8ToothIcon class="w-5 h-5 py-0.5" />
+          <div class="text-xs pr-1 whitespace-nowrap">設定</div>
+        </button>
+      </div>
+
       <div v-show="isDesktop" class="mt-2 mb-6">
-        <h2 class="text-lg font-bold text-gray-800 text-center">可変施肥マップ表示・出力</h2>
+        <h2 class="pl-6 text-lg font-bold text-gray-800">可変施肥マップ表示・出力</h2>
       </div>
 
       <div v-show="!isShowStep">
@@ -654,5 +675,6 @@ const selectedDialog = (selected: boolean) => {
       v-model:isOpen="isOpenVfmDeleteDialog"
       @selected="selectedDialog"
     />
+    <ExportFileConfigComp v-model:isOpenConfig="isOpenConfig" />
   </main>
 </template>

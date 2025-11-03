@@ -10,6 +10,9 @@ export const useConfigPersistStore = defineStore(
     const missingHumusDataInterpolation = ref(true)
     const isNoticeVisible = ref(true)
 
+    // ExportFileConfigComp.vue
+    const exportFileType = ref<'shp' | 'iso-xml'>('shp')
+
     const outsideMeshClipChanged = () => {
       outsideMeshClip.value = !outsideMeshClip.value
     }
@@ -30,12 +33,20 @@ export const useConfigPersistStore = defineStore(
       isNoticeVisible.value = false
     }
 
+    // ExportFileConfigComp.vue
+    const changeExportFileType = (type: 'shp' | 'iso-xml') => {
+      exportFileType.value = type
+    }
+
     const reset = () => {
       outsideMeshClip.value = true
       fiveStepsFertilization.value = true
       humusSymbolIsVisible.value = false
       missingHumusDataInterpolation.value = true
       isNoticeVisible.value = true
+
+      // ExportFileConfigComp.vue
+      exportFileType.value = 'shp'
     }
 
     return {
@@ -44,12 +55,14 @@ export const useConfigPersistStore = defineStore(
       humusSymbolIsVisible,
       missingHumusDataInterpolation,
       isNoticeVisible,
+      exportFileType,
       outsideMeshClipChanged,
       fiveStepsFertilizationChanged,
       humusSymbolIsVisibleChanged,
       missingHumusDataInterpolationChanged,
       reset,
       noticeVisibleChanged,
+      changeExportFileType,
     }
   },
   { persist: true },
