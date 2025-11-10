@@ -217,12 +217,17 @@ const exportVfm = async () => {
     vfm: vfm,
     field_polygon: currentPolygon,
   }
+  // console.log(JSON.stringify(JSON.stringify(payload)))
 
-  const exportFileType: 'shp' | 'iso-xml' = configPersistStore.exportFileType
+  const exportFileType: 'shp' | 'iso-xml' | 'geotiff' = configPersistStore.exportFileType
   const shpUrl = import.meta.env.VITE_API_URL
   const isoXmlUrl = import.meta.env.VITE_API_ISOXML_URL
+  const geotiffUrl = import.meta.env.VITE_API_GEOTIFF_URL
 
-  const url = exportFileType === 'shp' ? shpUrl : isoXmlUrl
+  // const url = exportFileType === 'shp' ? shpUrl : isoXmlUrl
+  const url =
+    exportFileType === 'shp' ? shpUrl : exportFileType === 'iso-xml' ? isoXmlUrl : geotiffUrl
+
   const apiKey = import.meta.env.VITE_AWS_APIGATEWAY_KEY
 
   // 可変施肥マップの出力処理
@@ -237,7 +242,6 @@ const exportVfm = async () => {
       },
       body: JSON.stringify(payload),
     })
-    // console.log(JSON.stringify(payload))
     if (!res.ok) {
       // HTTPエラーハンドリング
       handleError(

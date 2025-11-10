@@ -11,7 +11,7 @@ export const useConfigPersistStore = defineStore(
     const isNoticeVisible = ref(true)
 
     // ExportFileConfigComp.vue
-    const exportFileType = ref<'shp' | 'iso-xml'>('shp')
+    const exportFileType = ref<'shp' | 'iso-xml' | 'geotiff'>('shp')
 
     const outsideMeshClipChanged = () => {
       outsideMeshClip.value = !outsideMeshClip.value
@@ -34,7 +34,7 @@ export const useConfigPersistStore = defineStore(
     }
 
     // ExportFileConfigComp.vue
-    const changeExportFileType = (type: 'shp' | 'iso-xml') => {
+    const changeExportFileType = (type: 'shp' | 'iso-xml' | 'geotiff') => {
       exportFileType.value = type
     }
 

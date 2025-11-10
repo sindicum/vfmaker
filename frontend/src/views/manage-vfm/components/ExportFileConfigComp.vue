@@ -37,6 +37,15 @@ const closeDialog = () => {
               />
               <span>ISO-XMLファイル</span>
             </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                :checked="configPersistStore.exportFileType === 'geotiff'"
+                @change="configPersistStore.changeExportFileType('geotiff')"
+                class="w-4 h-4 accent-indigo-600"
+              />
+              <span>GeoTIFFファイル</span>
+            </label>
           </div>
         </div>
 
