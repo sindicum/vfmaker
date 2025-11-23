@@ -6,6 +6,10 @@ import { COORDINATE_PRECISION } from './LayerHandler'
 const LONG_PRESS_DURATION = 800 // 長押し判定時間（ms）
 const MOVE_THRESHOLD = 5 // 移動許容範囲（px）
 
+// タッチ判定半径（スマホでの操作性向上のため）
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+const TOUCH_RADIUS = isTouchDevice ? 25 : 15 // スマホ: 25px, PC: 15px
+
 // 頂点フィーチャーのプロパティ型定義
 interface VertexFeatureProperties {
   selectionPointFeatureId: string
@@ -21,7 +25,6 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
     const mapInstance = map?.value
     if (!mapInstance) return
 
-    console.log('getCanvas', mapInstance.getCanvas())
     // イベントリスナーを登録
     mapInstance.getCanvas().addEventListener('pointerdown', handlePointerDown)
     mapInstance.getCanvas().addEventListener('pointermove', handlePointerMove)
@@ -99,6 +102,13 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
     }
   }
 
+  /**
+   * 2点間の距離を計算
+   */
+  function getDistance(x1: number, y1: number, x2: number, y2: number): number {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+  }
+
   function executeVertexDeletion(e: PointerEvent) {
     const mapInstance = map?.value
     const drawInstance = draw?.value
@@ -109,23 +119,51 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    // Terra Drawの頂点レイヤーを検出
-    const features = mapInstance.queryRenderedFeatures([x, y])
-    console.log('長押し検出で取得したフィーチャー!!!:', features)
-
-    logger.debug('=== 長押し検出 ===')
-    logger.debug('検出されたフィーチャー数:', features.length)
-    features.forEach((feature, index) => {
-      logger.debug(`Feature ${index}:`, {
-        layerId: feature.layer.id,
-        layerType: feature.layer.type,
-        sourceId: feature.source,
-        properties: feature.properties,
-      })
+    // タップ位置を中心とした矩形領域で頂点を検索（スマホ対応）
+    const bbox: [[number, number], [number, number]] = [
+      [x - TOUCH_RADIUS, y - TOUCH_RADIUS],
+      [x + TOUCH_RADIUS, y + TOUCH_RADIUS],
+    ]
+    const features = mapInstance.queryRenderedFeatures(bbox, {
+      layers: ['td-point'], // 頂点レイヤーのみ検索
     })
 
-    // td-pointレイヤー（頂点）が検出された場合のみ処理
-    const vertexFeature = features.find((f) => f.layer.id === 'td-point')
+    logger.debug('=== 長押し検出 ===')
+    logger.debug('タップ位置:', { x, y }, 'タッチ半径:', TOUCH_RADIUS)
+    logger.debug('検出されたフィーチャー数:', features.length)
+
+    // td-pointレイヤーの頂点のみをフィルタリング
+    const vertexFeatures = features.filter((f) => f.layer.id === 'td-point')
+
+    if (vertexFeatures.length === 0) {
+      logger.debug('頂点が見つかりませんでした')
+      isPressing.value = false
+      pressStartPoint.value = null
+      return
+    }
+
+    // 複数の頂点が見つかった場合は、タップ位置に最も近い頂点を選択
+    const vertexFeature = vertexFeatures.reduce((closest, current) => {
+      // フィーチャーのピクセル座標を取得
+      const currentPoint = mapInstance.project([
+        current.geometry.coordinates[0],
+        current.geometry.coordinates[1],
+      ])
+      const closestPoint = mapInstance.project([
+        closest.geometry.coordinates[0],
+        closest.geometry.coordinates[1],
+      ])
+
+      const currentDist = getDistance(x, y, currentPoint.x, currentPoint.y)
+      const closestDist = getDistance(x, y, closestPoint.x, closestPoint.y)
+
+      logger.debug('頂点距離比較:', {
+        current: { id: current.id, dist: currentDist.toFixed(2) },
+        closest: { id: closest.id, dist: closestDist.toFixed(2) },
+      })
+
+      return currentDist < closestDist ? current : closest
+    })
 
     if (vertexFeature && vertexFeature.properties) {
       logger.debug('頂点を検出しました。削除処理を開始...')
@@ -194,11 +232,6 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
       } else {
         logger.debug('頂点情報が不完全です')
       }
-    } else {
-      logger.debug(
-        '頂点が見つかりませんでした。検出されたレイヤー:',
-        features.map((f) => f.layer.id),
-      )
     }
 
     // 状態をリセット
