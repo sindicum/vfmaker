@@ -535,7 +535,10 @@ const selectedDialog = (selected: boolean) => {
         'block z-20',
       ]"
     >
-      <div :class="[isDesktop ? 'top-10 right-8 ' : 'top-2 right-2', 'absolute']">
+      <div
+        v-show="!showRealtimeVfm"
+        :class="[isDesktop ? 'top-10 right-8 ' : 'top-2 right-2', 'absolute']"
+      >
         <button
           class="flex items-center border border-gray-300 rounded bg-gray-200 text-gray-700"
           @click="isOpenConfig = true"
