@@ -35,7 +35,7 @@ const closeDialog = () => {
                 @change="configPersistStore.changeExportFileType('iso-xml')"
                 class="w-4 h-4 accent-indigo-600"
               />
-              <span>ISO-XMLファイル</span>
+              <span>ISO-XML</span>
             </label>
             <label class="flex items-center gap-2">
               <input
@@ -44,7 +44,7 @@ const closeDialog = () => {
                 @change="configPersistStore.changeExportFileType('geotiff')"
                 class="w-4 h-4 accent-indigo-600"
               />
-              <span>GeoTIFFファイル</span>
+              <span>GeoTIFF</span>
             </label>
           </div>
         </div>
