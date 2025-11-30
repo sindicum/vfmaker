@@ -151,65 +151,68 @@ export function removePMTitlesLayer(map: MapLibreMap) {
 }
 
 export function setupTerraDraw(map: ShallowRef<MapLibreMap | null>) {
+  const selectMode = new TerraDrawSelectMode({
+    // selectModeでの地物の手動選択解除を無効化
+    allowManualDeselection: false,
+    styles: {
+      selectedPolygonColor: '#FF0000',
+      selectedPolygonFillOpacity: 0.4,
+      selectedPolygonOutlineColor: '#FF0000',
+      selectedPolygonOutlineWidth: 1,
+      selectionPointColor: '#FF0000',
+      selectionPointWidth: 7,
+      selectionPointOutlineColor: '#FFFFFF',
+      selectionPointOutlineWidth: 3,
+      midPointColor: '#FF0000',
+      midPointWidth: 2,
+      midPointOutlineColor: '#FF0000',
+      midPointOutlineWidth: 1,
+    },
+    flags: {
+      polygon: {
+        feature: {
+          scaleable: true,
+          rotateable: true,
+          draggable: false,
+          coordinates: {
+            midpoints: true,
+            draggable: true,
+            deletable: true,
+          },
+        },
+      },
+    },
+  })
+
+  const polygonMode = new TerraDrawPolygonMode({
+    styles: {
+      fillColor: '#FF0000',
+      fillOpacity: 0.2,
+      outlineColor: '#FF0000',
+      outlineWidth: 0.5,
+      closingPointColor: '#FFFF00',
+      closingPointWidth: 7,
+      closingPointOutlineColor: '#FF0000',
+      closingPointOutlineWidth: 3,
+    },
+    pointerDistance: 10,
+    validation: (feature, { updateType }) => {
+      if (updateType === 'finish') {
+        return ValidateNotSelfIntersecting(feature)
+      }
+      return {
+        valid: true,
+      }
+    },
+  })
+
   const draw = new TerraDraw({
     tracked: true,
     adapter: new TerraDrawMapLibreGLAdapter({
       map: map?.value,
       coordinatePrecision: COORDINATE_PRECISION,
     }),
-    modes: [
-      new TerraDrawSelectMode({
-        styles: {
-          selectedPolygonColor: '#FF0000',
-          selectedPolygonFillOpacity: 0.4,
-          selectedPolygonOutlineColor: '#FF0000',
-          selectedPolygonOutlineWidth: 1,
-          selectionPointColor: '#FF0000',
-          selectionPointWidth: 5,
-          selectionPointOutlineColor: '#FFFFFF',
-          selectionPointOutlineWidth: 2,
-          midPointColor: '#FF0000',
-          midPointWidth: 2,
-          midPointOutlineColor: '#FF0000',
-          midPointOutlineWidth: 1,
-        },
-        flags: {
-          polygon: {
-            feature: {
-              scaleable: true,
-              rotateable: true,
-              draggable: false,
-              coordinates: {
-                midpoints: true,
-                draggable: true,
-                deletable: true,
-              },
-            },
-          },
-        },
-      }),
-      new TerraDrawPolygonMode({
-        styles: {
-          fillColor: '#FF0000',
-          fillOpacity: 0.2,
-          outlineColor: '#FF0000',
-          outlineWidth: 0.5,
-          closingPointColor: '#FF0000',
-          closingPointWidth: 5,
-          closingPointOutlineColor: '#FFFFFF',
-          closingPointOutlineWidth: 2,
-        },
-        pointerDistance: 10,
-        validation: (feature, { updateType }) => {
-          if (updateType === 'finish') {
-            return ValidateNotSelfIntersecting(feature)
-          }
-          return {
-            valid: true,
-          }
-        },
-      }),
-    ],
+    modes: [selectMode, polygonMode],
   })
 
   return draw

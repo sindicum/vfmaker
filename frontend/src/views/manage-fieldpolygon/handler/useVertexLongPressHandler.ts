@@ -1,9 +1,8 @@
 import { ref } from 'vue'
 import type { MapLibreMapRef, DrawRef } from '@/types/map.type'
 import { logger } from '@/utils/logger'
-import { COORDINATE_PRECISION } from './LayerHandler'
 
-const LONG_PRESS_DURATION = 800 // 長押し判定時間（ms）
+const LONG_PRESS_DURATION = 650 // 長押し判定時間（ms）
 const MOVE_THRESHOLD = 5 // 移動許容範囲（px）
 
 // タッチ判定半径（スマホでの操作性向上のため）
@@ -61,7 +60,7 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
     // 長押しタイマーを開始
     longPressTimer.value = window.setTimeout(() => {
       if (isPressing.value) {
-        // 長押し検出時はpointerupをキャンセルしないで、クリックを発生させる
+        // 長押し検出時はpointerupをキャンセルしないで、クリックを発生させ頂点削除を実行
         executeVertexDeletion(e)
       }
     }, LONG_PRESS_DURATION)
@@ -144,6 +143,11 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
 
     // 複数の頂点が見つかった場合は、タップ位置に最も近い頂点を選択
     const vertexFeature = vertexFeatures.reduce((closest, current) => {
+      // Point型であることを確認（td-pointレイヤーは常にPoint型）
+      if (current.geometry.type !== 'Point' || closest.geometry.type !== 'Point') {
+        return closest
+      }
+
       // フィーチャーのピクセル座標を取得
       const currentPoint = mapInstance.project([
         current.geometry.coordinates[0],
@@ -186,43 +190,33 @@ export function useVertexLongPressHandler(map: MapLibreMapRef, draw: DrawRef) {
 
           // ポリゴンは最低4点必要（3頂点+閉じる点）なので、5点以上ある場合のみ削除
           if (coordinates.length > 4) {
-            // 頂点を削除（インデックス指定）し、座標精度を保証
-            const newCoordinates = coordinates
-              .filter((_: number[], index: number) => index !== vertexIndex)
-              .map((coord: number[]) => [
-                parseFloat(coord[0].toFixed(COORDINATE_PRECISION)),
-                parseFloat(coord[1].toFixed(COORDINATE_PRECISION)),
-              ])
+            // 対象頂点の緯度経度およびコンテナ座標を取得
+            const lng = coordinates[vertexIndex][0]
+            const lat = coordinates[vertexIndex][1]
+            const containerX = mapInstance.project([lng, lat]).x
+            const containerY = mapInstance.project([lng, lat]).y
 
-            // 最初と最後の座標が同じでない場合は修正（ポリゴンを閉じる）
-            if (
-              newCoordinates[0][0] !== newCoordinates[newCoordinates.length - 1][0] ||
-              newCoordinates[0][1] !== newCoordinates[newCoordinates.length - 1][1]
-            ) {
-              newCoordinates.push([...newCoordinates[0]])
+            // TODO: TerraDrawSelectModeのprivateメソッドのため、今後のアップデートで動作しなくなる可能性があり要見直し
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyDraw = drawInstance as any
+            const selectMode = anyDraw._modes?.['select']
+
+            if (!selectMode || typeof selectMode.onClick !== 'function') {
+              console.warn('TerraDraw select mode is not available or onClick is missing')
             }
 
-            // 新しいジオメトリを作成
-            const updatedFeature = {
-              ...feature,
-              geometry: {
-                ...feature.geometry,
-                coordinates: [newCoordinates],
-              },
-            }
+            // TerraDrawの内部関数を利用して右クリックイベントをシミュレートし頂点削除を実行
+            selectMode.onClick({
+              lng: lng,
+              lat: lat,
+              containerX: containerX,
+              containerY: containerY,
+              button: 'right',
+              heldKeys: [],
+              isContextMenu: false,
+            })
 
-            logger.debug('頂点削除後の座標数:', newCoordinates.length)
-
-            // フィーチャーを更新
-            drawInstance.removeFeatures([featureId])
-            const result = drawInstance.addFeatures([updatedFeature])
-            logger.debug('追加結果:', result)
-
-            // selectモードに戻して再選択
-            drawInstance.setMode('select')
-            drawInstance.selectFeature(featureId)
-
-            logger.debug('頂点を削除しました（長押し）')
+            logger.debug('頂点を削除しました（長押しを右クリックに変換）')
           } else {
             logger.debug('これ以上頂点を削除できません（最小3頂点が必要）')
           }
