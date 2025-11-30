@@ -69,7 +69,8 @@ const handleUpload = async () => {
     )
 
     if (polygonFeatures.length === 0) {
-      throw new Error('ポリゴンデータが含まれていません')
+      store.setMessage('Error', 'ポリゴンデータが含まれていません')
+      return
     }
 
     uploadProgress.value = `${polygonFeatures.length}個のポリゴンを登録しています...`
@@ -119,6 +120,7 @@ const handleUpload = async () => {
     handleError(appError)
   } finally {
     isUploading.value = false
+    selectedFile.value = null
     uploadProgress.value = ''
   }
 }
