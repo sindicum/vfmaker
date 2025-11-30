@@ -56,7 +56,7 @@ const isOpenFileImportDialog = ref(false)
 const currentActiveName = computed(() => {
   if (createPolygonActive.value) return 'ポリゴンの新規作成'
   if (registerFudepolyActive.value) return '筆ポリゴンからの登録'
-  if (updatePolygonActive.value) return 'ポリゴンの更新'
+  if (updatePolygonActive.value) return 'ポリゴンの編集'
   if (deletePolygonActive.value) return 'ポリゴンの削除'
   return ''
 })

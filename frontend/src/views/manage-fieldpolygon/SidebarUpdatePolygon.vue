@@ -115,7 +115,7 @@ const handleSelected = async (isSelect: boolean) => {
       class="h-14 lg:h-auto bg-amber-300 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-900 flex-1 w-full justify-center py-1 lg:px-4 lg:py-2 rounded-md border border-transparent shadow-sm"
       v-bind:disabled="!updatePolygonActive"
     >
-      更新実行
+      上書き保存
     </button>
     <button
       type="button"
