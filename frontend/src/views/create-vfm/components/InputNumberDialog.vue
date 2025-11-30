@@ -102,6 +102,7 @@ const inputNum = (currentDialog: DialogType | undefined) => {
   }
   dialogName.value = ''
   inputNumber.value = '0'
+  negativeSign.value = false
 }
 
 const onClickNumBtn = (num: string) => {
