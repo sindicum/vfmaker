@@ -33,10 +33,9 @@ export function useVfmHandler(map: MapLibreMapRef) {
   const applicationStep = computed<[number, number, number, number, number]>(() => {
     // 可変施肥増減率が0または100の場合は1または99に変換（applicationStepの値に差を設けるため）
     let effectiveRate
+
     if (variableFertilizationRangeRate.value === 0) {
       effectiveRate = 1
-    } else if (variableFertilizationRangeRate.value === 100) {
-      effectiveRate = 99
     } else {
       effectiveRate = variableFertilizationRangeRate.value
     }

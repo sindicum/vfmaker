@@ -27,7 +27,7 @@ const { createVfmMap } = useStoreHandler()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
-  variableFertilizationRangeRate: { min: 1, max: 99 },
+  variableFertilizationRangeRate: { min: 1, max: 100 },
 }
 
 const vfmMemo = ref('')
