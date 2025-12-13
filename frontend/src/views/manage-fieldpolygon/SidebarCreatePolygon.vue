@@ -4,12 +4,14 @@ import { ref } from 'vue'
 import InputMemoDialog from './components/InputMemoDialog.vue'
 import { usePolygonFeature } from './composables/usePolygonFeature'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useStore } from '@/stores/store'
 
 import type { Draw, MapLibreMap } from '@/types/map.type'
 import type { FeatureCollection } from 'geojson'
 
 const map = defineModel<MapLibreMap>('map')
 const draw = defineModel<Draw>('draw')
+const store = useStore()
 const createPolygonActive = defineModel<boolean>('createPolygonActive')
 const isOpenDialog = defineModel<boolean>('isOpenDialog')
 const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
@@ -42,9 +44,18 @@ const handleSelected = async (isSelect: boolean) => {
   const snapshot = draw.value?.getSnapshot()
   const feature = getPolygonFromSnapshot(snapshot)
   if (!feature) return
-  const field = createFieldFromPolygon(feature, memo.value)
 
-  await createField(field)
+  try {
+    const field = createFieldFromPolygon(feature, memo.value)
+    await createField(field)
+  } catch (error) {
+    if (error instanceof Error) {
+      store.setMessage('Error', error.message)
+    } else {
+      store.setMessage('Error', '不明なエラーが発生しました')
+    }
+  }
+
   isOpenDialog.value = false
   drawInstance.clear()
 
