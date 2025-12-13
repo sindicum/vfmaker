@@ -20,6 +20,10 @@ const variableFertilizationRangeRate = defineModel<number>('variableFertilizatio
 
 const vfmapFeatures = defineModel<VfmapFeature[]>('vfmapFeatures')
 const totalAmount = defineModel<number>('totalAmount')
+
+const humusMean = defineModel('humus-mean')
+const humusStdDev = defineModel('humus-std-dev')
+
 const activeFeature = defineModel<FieldPolygonFeature | null>('activeFeature')
 
 const { isDesktop } = useControlScreenWidth()
@@ -27,7 +31,7 @@ const { createVfmMap } = useStoreHandler()
 
 const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
-  variableFertilizationRangeRate: { min: 1, max: 100 },
+  variableFertilizationRangeRate: { min: 0, max: 100 },
 }
 
 const vfmMemo = ref('')
@@ -141,24 +145,29 @@ const executeSave = async () => {
           maxlength="64"
         />
       </div>
+
       <div
         :class="[
           isDesktop
             ? 'grid-cols-[7fr_2fr_4fr] col-span-1 gap-y-3'
             : 'grid-cols-4 col-span-2 gap-y-2',
-          'grid items-center bg-amber-50 rounded-lg border border-amber-200 mt-3 p-2',
+          'grid items-center text-slate-400 bg-slate-50 rounded-lg border border-slate-300 mt-3 p-2',
         ]"
       >
-        <label class="text-amber-800">合計施肥量</label>
-        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
+        <label class="text-amber-600">合計施肥量</label>
+        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-600']">
           {{ Math.round(totalAmount ?? 0) }} kg
         </div>
 
-        <label class="text-amber-800">概算面積</label>
-        <div :class="[isDesktop ? 'col-span-2' : '', 'text-amber-700']">
-          {{ Math.round((area ?? 0) / 100) }} a
-        </div>
+        <label>概算面積</label>
+        <div :class="[isDesktop ? 'col-span-2' : '']">{{ Math.round((area ?? 0) / 100) }} a</div>
+
+        <label>平均腐植含有量</label>
+        <div :class="[isDesktop ? 'col-span-2' : '']">{{ humusMean }} mg/乾土1kg</div>
+        <label>標準偏差</label>
+        <div :class="[isDesktop ? 'col-span-2' : '']">{{ humusStdDev }} mg/乾土1kg</div>
       </div>
+
       <div class="grid grid-cols-2 gap-3 justify-center my-4">
         <button
           class="p-2 rounded-md bg-white ring-1 ring-inset ring-gray-300"

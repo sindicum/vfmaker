@@ -81,21 +81,18 @@ export const useStoreHandler = () => {
   const updateField = async (id: number, field: UpdateField) => {
     await withDb('圃場更新', async () => {
       await indexedDB.updateField(id, field)
-      // await readFields()
     })
   }
 
   const deleteField = async (id: number) => {
     await withDb('圃場削除', async () => {
       await indexedDB.deleteField(id)
-      // await readFields()
     })
   }
 
   const deleteAllFields = async () => {
     await withDb('全圃場削除', async () => {
       await indexedDB.deleteAllFields()
-      // await readFields()
     })
   }
 
@@ -135,14 +132,12 @@ export const useStoreHandler = () => {
   const updateVfmMap = async (id: number, vfmMap: Partial<VfmMapDB>) => {
     await withDb('VFマップ更新', async () => {
       await indexedDB.updateVfmMap(id, vfmMap)
-      // await updateVfmMapsCount()
     })
   }
 
   const deleteVfmMap = async (id: number) => {
     await withDb('VFマップ削除', async () => {
       await indexedDB.deleteVfmMap(id)
-      // await updateVfmMapsCount()
     })
   }
 

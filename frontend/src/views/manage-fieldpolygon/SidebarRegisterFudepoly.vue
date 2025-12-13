@@ -105,12 +105,17 @@ const handleSelected = async (isSelect: boolean) => {
   const snapshot = draw.value?.getSnapshot()
   const feature = getPolygonFromSnapshot(snapshot)
   if (!feature) return
-  const field = createFieldFromPolygon(feature, memo.value)
 
-  await createField(field).catch((error) => {
-    console.error('ポリゴンの登録に失敗しました:', error)
-    store.setMessage('Error', 'ポリゴンの登録に失敗しました')
-  })
+  try {
+    const field = createFieldFromPolygon(feature, memo.value)
+    await createField(field)
+  } catch (error) {
+    if (error instanceof Error) {
+      store.setMessage('Error', error.message)
+    } else {
+      store.setMessage('Error', '不明なエラーが発生しました')
+    }
+  }
 
   draw.value?.clear()
   addPMTilesSource(mapInstance)

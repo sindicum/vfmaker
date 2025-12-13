@@ -50,6 +50,8 @@ export function usePolygonFeature() {
   ): Field => {
     const area = turfArea(feature)
 
+    validateArea(area)
+
     return {
       uuid: uuid || feature.id || crypto.randomUUID(),
       geometry_type: 'Polygon', // 型ガードで保証済み
@@ -66,10 +68,18 @@ export function usePolygonFeature() {
   const createUpdateField = (feature: TerraDrawPolygonFeature, memo: string): UpdateField => {
     const area = turfArea(feature)
 
+    validateArea(area)
+
     return {
       geometry_coordinates: feature.geometry.coordinates, // 型安全
       area_are: Math.round(area / 100),
       memo: memo,
+    }
+  }
+
+  function validateArea(area: number) {
+    if (area / 10000 >= 20) {
+      throw new Error('登録できる圃場面積は20ha以下です')
     }
   }
 

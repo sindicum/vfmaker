@@ -89,19 +89,22 @@ const handleSelected = async (isSelect: boolean) => {
   const feature = getPolygonFromSnapshot(snapshot)
   if (!feature) return
 
-  const field = createUpdateField(feature, memo.value)
-
-  await updateField(updatePolygonId.value, field).catch((error) => {
-    console.error('ポリゴンの更新に失敗しました:', error)
-    store.setMessage('Error', 'ポリゴンの更新に失敗しました')
-  })
-
-  draw.value?.clear()
+  try {
+    const field = createUpdateField(feature, memo.value)
+    await updateField(updatePolygonId.value, field)
+    store.setMessage('Info', 'ポリゴンを更新しました')
+  } catch (error) {
+    if (error instanceof Error) {
+      store.setMessage('Error', error.message)
+    } else {
+      store.setMessage('Error', '不明なエラーが発生しました')
+    }
+  }
 
   fieldPolygonFeatureCollection.value = await readAllFields()
 
   addEditLayer(mapInstance)
-  store.setMessage('Info', 'ポリゴンを更新しました')
+  draw.value?.clear()
   updatePolygonId.value = null
   isOpenDialog.value = false
 }

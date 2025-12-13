@@ -92,12 +92,18 @@ const handleUpload = async () => {
       feature.properties = feature.properties || {}
       const memoBlank = ''
 
-      const field = createFieldFromPolygon(feature, memoBlank)
-      await createField(field)
-
-      addedCount++
-      remainingFeaturesLength--
+      try {
+        const field = createFieldFromPolygon(feature, memoBlank)
+        await createField(field)
+        addedCount++
+        remainingFeaturesLength--
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error(`${addedCount + 1}番目の圃場は登録できませんでした`)
+        }
+      }
     }
+
     fieldPolygonFeatureCollection.value = await readAllFields()
 
     if (addedCount > 0) {
