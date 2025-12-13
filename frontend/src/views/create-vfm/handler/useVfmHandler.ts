@@ -18,8 +18,8 @@ import type { VfmapFeature } from '@/types/vfm.type'
  */
 
 export function useVfmHandler(map: MapLibreMapRef) {
-  const baseFertilizationAmount = ref(100)
-  const variableFertilizationRangeRate = ref(20)
+  const baseFertilizationAmount = ref<number>(100)
+  const variableFertilizationRangeRate = ref<number>(20)
   const applicationGridFeatureCollection = ref<FeatureCollection>({
     type: 'FeatureCollection',
     features: [],
@@ -31,17 +31,9 @@ export function useVfmHandler(map: MapLibreMapRef) {
 
   // 可変施肥増減率を5段階で算出（max -> min の順）
   const applicationStep = computed<[number, number, number, number, number]>(() => {
-    // 可変施肥増減率が0または100の場合は1または99に変換（applicationStepの値に差を設けるため）
-    let effectiveRate
-
-    if (variableFertilizationRangeRate.value === 0) {
-      effectiveRate = 1
-    } else {
-      effectiveRate = variableFertilizationRangeRate.value
-    }
-    const rangeMax = effectiveRate / 100
+    const rangeMax = variableFertilizationRangeRate.value / 100
     const rangeMid = 0
-    const rangeMin = (effectiveRate / 100) * -1
+    const rangeMin = (variableFertilizationRangeRate.value / 100) * -1
     const rangeMaxMid = rangeMax / 2
     const rangeMinMid = rangeMin / 2
     return [rangeMax, rangeMaxMid, rangeMid, rangeMinMid, rangeMin]

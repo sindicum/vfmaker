@@ -73,6 +73,8 @@ const {
   gridEW,
   gridNS,
   buffer,
+  humusMean,
+  humusStdDev,
   baseGrid,
   humusPoint,
   humusRaster,
@@ -110,19 +112,6 @@ onMounted(() => {
     addLayer(mapInstance)
     mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
   })
-
-  // const setupFieldLayers = () => {
-  //   if (!mapInstance.getSource('registeredFields')) {
-  //   }
-  //   mapInstance.on('click', 'registeredFillLayer', mapClickHandler)
-  // }
-
-  // // マップスタイルが既に読み込まれているか確認
-  // if (mapInstance.isStyleLoaded()) {
-  //   setupFieldLayers()
-  // } else {
-  //   mapInstance.once('style.load', setupFieldLayers)
-  // }
 })
 
 onBeforeUnmount(() => {
@@ -234,6 +223,12 @@ watch(step2Status, (currentStatus, previousStatus) => {
       })
       // vfmBaseGridを更新
       vfmBaseGrid = { type: 'FeatureCollection', features: intersectionsFeatures }
+    }
+
+    // 腐植含有量の変動係数を可変施肥増減率として設定（nullの場合は初期値を適用）
+    if (humusStdDev.value !== null && humusMean.value != null) {
+      const cv = Math.round((humusStdDev.value / humusMean.value) * 100)
+      variableFertilizationRangeRate.value = cv
     }
 
     const { features, areaSum, amountSum } = createVfm(
@@ -428,6 +423,8 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:vfmap-features="vfmapFeatures"
             v-model:total-amount="totalAmount"
             v-model:area="totalArea"
+            v-model:humus-mean="humusMean"
+            v-model:humus-std-dev="humusStdDev"
             v-model:active-feature="activeFeature"
           />
         </li>

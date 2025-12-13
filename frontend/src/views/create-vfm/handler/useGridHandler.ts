@@ -52,6 +52,8 @@ export function useGridHandler(map: MapLibreMapRef) {
   const gridEW = ref<number>(20)
   const gridNS = ref<number>(20)
   const buffer = ref<number>(0)
+  const humusMean = ref<number | null>(null)
+  const humusStdDev = ref<number | null>(null)
   const humusPoint = ref<HumusPointFeatureCollection>({
     type: 'FeatureCollection',
     features: [],
@@ -151,7 +153,19 @@ export function useGridHandler(map: MapLibreMapRef) {
 
     const cogUrl = import.meta.env.VITE_OM_MAP_URL
     // COGファイルより腐植値を取得
-    const cogSource = await extractCogSource(cogUrl, bbox3857)
+    const cogSource = await extractCogHumusValues(cogUrl, bbox3857)
+
+    const result = calculateHumusStats(cogSource)
+
+    if (!result.ok) {
+      humusMean.value = null
+      humusStdDev.value = null
+      console.log('humus stats: N/A', result.reason)
+      return
+    }
+
+    humusMean.value = result.stats.mean
+    humusStdDev.value = result.stats.stdDev
 
     // 腐植値をラスター画像に変換
     humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
@@ -340,21 +354,16 @@ export function useGridHandler(map: MapLibreMapRef) {
     bbox3857: [number, number, number, number],
   ): Promise<ReadRasterResult> {
     const { handleError } = useErrorHandler()
+    const pool = new Pool()
 
     try {
       const tiff = await fromUrl(url)
-      const pool = new Pool()
       const cogSource = await tiff.readRasters({
         bbox: bbox3857,
         samples: [0], // 取得するバンドを指定
         interleave: true,
         pool,
       }) // 戻り値の型はCOGソースに依存する。腐植マップの場合はUnit8Array
-
-      // 成功時もPoolを破棄
-      if (pool && 'destroy' in pool && typeof pool.destroy === 'function') {
-        pool.destroy()
-      }
 
       return cogSource
     } catch (error) {
@@ -405,13 +414,30 @@ export function useGridHandler(map: MapLibreMapRef) {
         handleError(retryAppError)
         throw retryError // エラーを上位に伝播
       }
+    } finally {
+      // 最終的にPoolを破棄
+      // Poolが存在しない場合もあるため、条件を追加
+      if (pool && 'destroy' in pool && typeof pool.destroy === 'function') {
+        pool.destroy()
+      }
     }
   }
+
+  async function extractCogHumusValues(
+    url: string,
+    bbox3857: [number, number, number, number],
+  ): Promise<ReadRasterResult> {
+    return await extractCogSource(url, bbox3857)
+  }
+  // }
 
   function getHumusPointGridBbox(
     bbox: [number, number, number, number],
     cogSource: ReadRasterResult,
   ): HumusPointFeatureCollection {
+    const data = toNumericValues(cogSource)
+    if (!data) throw new Error('Invalid raster data')
+
     const bboxMinLng = bbox[0]
     const bboxMinLat = bbox[1]
     const bboxMaxLng = bbox[2]
@@ -572,6 +598,69 @@ export function useGridHandler(map: MapLibreMapRef) {
     return canvas
   }
 
+  type HumusStats = { mean: number; stdDev: number }
+
+  type HumusStatsResult =
+    | { ok: true; stats: HumusStats }
+    | { ok: false; reason: 'NO_VALID_VALUES' | 'NOT_FINITE' }
+
+  type NumericArrayLike = ArrayLike<number> // TypedArrayもOK
+
+  function isNumericArrayLike(x: unknown): x is NumericArrayLike {
+    return ArrayBuffer.isView(x) && !(x instanceof DataView)
+  }
+
+  function toNumericValues(input: ReadRasterResult): NumericArrayLike | null {
+    // バンド配列なら先頭を使う（samples:[0]なら通常これでOK）
+    if (Array.isArray(input)) {
+      const band0 = input[0]
+      return isNumericArrayLike(band0) ? (band0 as NumericArrayLike) : null
+    }
+    // 単一バンド（TypedArray & Dimensions など）
+    return isNumericArrayLike(input) ? (input as NumericArrayLike) : null
+  }
+
+  function calculateHumusStats(values: ReadRasterResult): HumusStatsResult {
+    const arr = toNumericValues(values)
+    if (!arr || arr.length === 0) {
+      return { ok: false, reason: 'NO_VALID_VALUES' }
+    }
+
+    let count = 0
+    let sum = 0
+    let sumSq = 0
+
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i]
+      if (v === 0 || !Number.isFinite(v)) continue
+      count++
+      sum += v
+      sumSq += v * v
+    }
+
+    if (count === 0) {
+      return { ok: false, reason: 'NO_VALID_VALUES' }
+    }
+
+    const mean = sum / count
+    const variance = sumSq / count - mean * mean
+
+    if (!Number.isFinite(mean) || variance < 0) {
+      return { ok: false, reason: 'NOT_FINITE' }
+    }
+
+    const stdDev = Math.sqrt(variance)
+
+    if (!Number.isFinite(stdDev)) {
+      return { ok: false, reason: 'NOT_FINITE' }
+    }
+
+    return {
+      ok: true,
+      stats: { mean: Math.round(mean), stdDev: Math.round(stdDev) },
+    }
+  }
+
   return {
     loadedFeatureCollection,
     activeFeature,
@@ -579,6 +668,8 @@ export function useGridHandler(map: MapLibreMapRef) {
     gridEW,
     gridNS,
     buffer,
+    humusMean,
+    humusStdDev,
     baseGrid,
     humusPoint,
     humusRaster,
