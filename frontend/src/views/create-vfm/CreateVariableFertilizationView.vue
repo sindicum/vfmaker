@@ -225,9 +225,10 @@ watch(step2Status, (currentStatus, previousStatus) => {
       vfmBaseGrid = { type: 'FeatureCollection', features: intersectionsFeatures }
     }
 
-    // 腐植含有量の変動係数を可変施肥増減率として設定（nullの場合は初期値を適用）
+    // 腐植含有量の変動係数を可変施肥増減率として設定（humusStdDevやhumusMeanがnullの場合は初期値を適用）
     if (humusStdDev.value !== null && humusMean.value != null) {
-      const cv = Math.round((humusStdDev.value / humusMean.value) * 100)
+      const rawCv = (humusStdDev.value / humusMean.value) * 100
+      const cv = Number.isFinite(rawCv) ? Math.round(rawCv) : 0
       variableFertilizationRangeRate.value = cv
     }
 

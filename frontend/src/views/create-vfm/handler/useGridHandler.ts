@@ -155,17 +155,15 @@ export function useGridHandler(map: MapLibreMapRef) {
     // COGファイルより腐植値を取得
     const cogSource = await extractCogHumusValues(cogUrl, bbox3857)
 
+    // 腐植含有量平均値と標準偏差をセット
     const result = calculateHumusStats(cogSource)
-
     if (!result.ok) {
-      humusMean.value = null
-      humusStdDev.value = null
-      console.log('humus stats: N/A', result.reason)
-      return
+      humusMean.value = 0
+      humusStdDev.value = 0
+    } else {
+      humusMean.value = result.stats.mean
+      humusStdDev.value = result.stats.stdDev
     }
-
-    humusMean.value = result.stats.mean
-    humusStdDev.value = result.stats.stdDev
 
     // 腐植値をラスター画像に変換
     humusRaster.value = createHumusRasterImage(cogSource, activeFeatureBufferComputed.value)
@@ -429,7 +427,6 @@ export function useGridHandler(map: MapLibreMapRef) {
   ): Promise<ReadRasterResult> {
     return await extractCogSource(url, bbox3857)
   }
-  // }
 
   function getHumusPointGridBbox(
     bbox: [number, number, number, number],
