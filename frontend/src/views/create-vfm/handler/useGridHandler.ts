@@ -315,7 +315,7 @@ export function useGridHandler(map: MapLibreMapRef) {
       store.setMessage('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
     } else if (gridCount.value > 2000) {
       throw new Error(
-        'グリッド数が上限（2000）を超えているので、作成面積を小さくする・グリッド幅を広げる等してください。',
+        'グリッド数が上限（2000）を超えているので、グリッドサイズを小さくしてください。',
       )
     }
 
