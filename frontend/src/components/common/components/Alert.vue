@@ -6,6 +6,7 @@ const store = useStore()
 const isOpen = ref(false)
 const alertStyle = ref('')
 const alertText = ref('')
+const timeOut = ref(3000)
 let timeoutId: ReturnType<typeof setTimeout> | null = null
 
 const closeAlert = () => {
@@ -26,21 +27,24 @@ watch(
     if (alertType == 'Error') {
       alertStyle.value = 'bg-red-100/80 border-red-600'
       alertText.value = 'text-red-600'
+      timeOut.value = 7000
     }
     if (alertType == 'Warn') {
       alertStyle.value = 'bg-yellow-100/80 border-yellow-600'
       alertText.value = 'text-yellow-600'
+      timeOut.value = 5000
     }
     if (alertType == 'Info') {
       alertStyle.value = 'bg-green-100/80 border-green-600'
       alertText.value = 'text-green-600'
+      timeOut.value = 3000
     }
 
     if (timeoutId) clearTimeout(timeoutId)
     timeoutId = setTimeout(() => {
       isOpen.value = false
       store.setMessage('', '')
-    }, 3000)
+    }, timeOut.value)
   },
 )
 </script>
