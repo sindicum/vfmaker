@@ -52,6 +52,7 @@ export function useGridHandler(map: MapLibreMapRef) {
   const gridEW = ref<number>(20)
   const gridNS = ref<number>(20)
   const buffer = ref<number>(0)
+  const gridCount = ref<number>(0)
   const humusMean = ref<number | null>(null)
   const humusStdDev = ref<number | null>(null)
   const humusPoint = ref<HumusPointFeatureCollection>({
@@ -95,17 +96,29 @@ export function useGridHandler(map: MapLibreMapRef) {
         pivot: centroid,
       },
     )
-    const turfRotated = turfTransformRotate(
-      drawBaseMeshPolygon(target_polygon_rotated, gridEW.value, gridNS.value),
-      -Number(gridRotationAngle.value),
-      { pivot: centroid },
-    )
+    try {
+      const turfRotated = turfTransformRotate(
+        drawBaseMeshPolygon(target_polygon_rotated, gridEW.value, gridNS.value),
+        -Number(gridRotationAngle.value),
+        { pivot: centroid },
+      )
 
-    baseGrid.value = turfRotated
+      baseGrid.value = turfRotated
 
-    const source = getGeoJSONSource(mapInstance, 'base-grid')
-    if (!source) return
-    source.setData(baseGrid.value)
+      const source = getGeoJSONSource(mapInstance, 'base-grid')
+
+      if (!source) {
+        addBaseGrid(mapInstance, baseGrid.value)
+      } else {
+        source.setData(baseGrid.value)
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        store.setMessage('Error', error.message)
+      } else {
+        store.setMessage('Error', '不明なエラーが発生しました')
+      }
+    }
   })
 
   async function onClickField(e: MapLibreMouseEvent) {
@@ -215,13 +228,21 @@ export function useGridHandler(map: MapLibreMapRef) {
       },
     )
     // 回転したターゲットポリゴンに基づきメッシュ作成し元の位置に戻す
-    const targetPolygonReRotated = turfTransformRotate(
-      drawBaseMeshPolygon(targetPolygonRotated, gridEW.value, gridNS.value),
-      -Number(vraDeg),
-      { pivot: centroid },
-    )
-    baseGrid.value = targetPolygonReRotated
-    addBaseGrid(mapInstance, baseGrid.value)
+    try {
+      const targetPolygonReRotated = turfTransformRotate(
+        drawBaseMeshPolygon(targetPolygonRotated, gridEW.value, gridNS.value),
+        -Number(vraDeg),
+        { pivot: centroid },
+      )
+      baseGrid.value = targetPolygonReRotated
+      addBaseGrid(mapInstance, baseGrid.value)
+    } catch (error) {
+      if (error instanceof Error) {
+        store.setMessage('Error', error.message)
+      } else {
+        store.setMessage('Error', '不明なエラーが発生しました')
+      }
+    }
   }
 
   // クリックしたポリゴン形状にフィットするbboxの回転角を算出
@@ -268,7 +289,7 @@ export function useGridHandler(map: MapLibreMapRef) {
     const bbox_SW_coords = [field_feature_bbox[0], field_feature_bbox[1]]
 
     // bbox横方向（横幅）の行数
-    const bbox_columns = Math.floor(
+    const bbox_columns = Math.ceil(
       (turfDistance(
         turfPoint([bbox_NW_coords[0], bbox_NW_coords[1]]),
         turfPoint([bbox_NE_coords[0], bbox_NE_coords[1]]),
@@ -278,7 +299,7 @@ export function useGridHandler(map: MapLibreMapRef) {
         effectiveGridEW,
     )
     // bbox縦方向（奥行き）の列数
-    const bbox_rows = Math.floor(
+    const bbox_rows = Math.ceil(
       (turfDistance(
         turfPoint([bbox_SW_coords[0], bbox_SW_coords[1]]),
         turfPoint([bbox_NW_coords[0], bbox_NW_coords[1]]),
@@ -288,6 +309,16 @@ export function useGridHandler(map: MapLibreMapRef) {
         effectiveGridNS,
     )
 
+    gridCount.value = bbox_rows * bbox_columns
+
+    if (gridCount.value >= 1000 && gridCount.value <= 2000) {
+      store.setMessage('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
+    } else if (gridCount.value > 2000) {
+      throw new Error(
+        'グリッド数が上限（2000）を超えているので、グリッドサイズを小さくしてください。',
+      )
+    }
+
     let current_point_feature = turfPoint([bbox_NW_coords[0], bbox_NW_coords[1]])
     const grid_feature_collection = []
     let NW_coords
@@ -295,10 +326,11 @@ export function useGridHandler(map: MapLibreMapRef) {
     let NE_coords
     let SE_coords
 
-    for (let lat_count = 0; lat_count <= bbox_rows; lat_count++) {
-      for (let lng_count = 0; lng_count <= bbox_columns; lng_count++) {
+    for (let lat_count = 1; lat_count <= bbox_rows; lat_count++) {
+      for (let lng_count = 1; lng_count <= bbox_columns; lng_count++) {
         NW_coords = current_point_feature.geometry.coordinates
-        if (lat_count !== bbox_rows) {
+
+        if (lat_count < bbox_rows) {
           SW_coords = turfDestination(current_point_feature, gridNS / 1000, 180, {
             units: 'kilometers',
           }).geometry.coordinates
@@ -665,6 +697,7 @@ export function useGridHandler(map: MapLibreMapRef) {
     gridEW,
     gridNS,
     buffer,
+    gridCount,
     humusMean,
     humusStdDev,
     baseGrid,

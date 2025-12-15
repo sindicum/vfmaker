@@ -11,7 +11,7 @@ import {
 } from './LayerHandler'
 
 import type { MapLibreMapRef, DrawRef } from '@/types/map.type'
-import type { Feature, Polygon } from 'geojson'
+import type { Feature, MultiPolygon, Polygon } from 'geojson'
 import type { MapLayerMouseEvent } from 'maplibre-gl'
 
 export function useRegisterFudepolyHandler(map: MapLibreMapRef, draw: DrawRef) {
@@ -53,9 +53,12 @@ export function useRegisterFudepolyHandler(map: MapLibreMapRef, draw: DrawRef) {
         feature = f as Feature<Polygon>
       }
     } else {
+      // 筆ポリゴンの地物型はすべてPolygonだが（2025年版）タイル化した際にはMultiPolygonも含む場合あり
       const polygonFeatures = filteredFeatures.filter(
-        (feature) => feature.geometry.type === 'Polygon',
-      ) as Feature<Polygon>[]
+        (feature) =>
+          feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon',
+      ) as Feature<Polygon | MultiPolygon>[]
+
       const unionResult = turfUnion(turfFeatureCollection(polygonFeatures))
 
       if (unionResult && unionResult.geometry.type === 'Polygon') {

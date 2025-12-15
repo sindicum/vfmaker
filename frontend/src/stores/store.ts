@@ -2,7 +2,7 @@ import { ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import type { GeolocateControl } from 'maplibre-gl'
 
-type alertType = 'Error' | 'Info' | ''
+type alertType = 'Error' | 'Warn' | 'Info' | ''
 
 export const useStore = defineStore('store', () => {
   const alertMessage = ref<{ alertType: alertType; message: string }>({

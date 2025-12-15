@@ -78,8 +78,8 @@ export function usePolygonFeature() {
   }
 
   function validateArea(area: number) {
-    if (area / 10000 >= 20) {
-      throw new Error('登録できる圃場面積は20ha以下です')
+    if (area / 10000 >= 100) {
+      throw new Error('登録できる圃場面積は100ha以下です')
     }
   }
 
