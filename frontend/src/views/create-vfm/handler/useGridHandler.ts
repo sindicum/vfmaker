@@ -312,10 +312,10 @@ export function useGridHandler(map: MapLibreMapRef) {
     gridCount.value = bbox_rows * bbox_columns
 
     if (gridCount.value >= 1000 && gridCount.value <= 2000) {
-      store.setMessage('Warn', 'グリッドが細かいので、グリッド幅を広げることを検討して下さい。')
+      store.setMessage('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
     } else if (gridCount.value > 2000) {
       throw new Error(
-        'グリッドが細かすぎるので、作成面積を小さくする・グリッド幅を広げる等してください。',
+        'グリッド数が上限（2000）を超えているので、作成面積を小さくする・グリッド幅を広げる等してください。',
       )
     }
 
