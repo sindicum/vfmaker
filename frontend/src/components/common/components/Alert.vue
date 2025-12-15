@@ -4,6 +4,8 @@ import { useStore } from '@/stores/store'
 
 const store = useStore()
 const isOpen = ref(false)
+const alertStyle = ref('')
+const alertText = ref('')
 let timeoutId: ReturnType<typeof setTimeout> | null = null
 
 const closeAlert = () => {
@@ -14,34 +16,41 @@ const closeAlert = () => {
 watch(
   () => store.alertMessage.message,
   (newMessage: string) => {
-    if (newMessage !== '') {
-      isOpen.value = true
+    const alertType = store.alertMessage.alertType
 
-      if (timeoutId) clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
-        isOpen.value = false
-        store.setMessage('', '')
-      }, 3000)
+    if (newMessage == '') {
+      return
     }
+    isOpen.value = true
+
+    if (alertType == 'Error') {
+      alertStyle.value = 'bg-red-100/80 border-red-600'
+      alertText.value = 'text-red-600'
+    }
+    if (alertType == 'Warn') {
+      alertStyle.value = 'bg-yellow-100/80 border-yellow-600'
+      alertText.value = 'text-yellow-600'
+    }
+    if (alertType == 'Info') {
+      alertStyle.value = 'bg-green-100/80 border-green-600'
+      alertText.value = 'text-green-600'
+    }
+
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => {
+      isOpen.value = false
+      store.setMessage('', '')
+    }, 3000)
   },
 )
 </script>
 
 <template>
   <div v-show="isOpen" class="relative flex justify-center z-30">
-    <div
-      :class="[
-        store.alertMessage.alertType === 'Error'
-          ? 'bg-red-100/80 border-red-600'
-          : 'bg-green-100/80 border-green-600',
-        'fixed top-2 lg:top-20 w-11/12 h-16 lg:w-1/2 rounded-md border',
-      ]"
-    >
+    <div :class="[alertStyle, 'fixed top-2 lg:top-20 w-11/12 h-16 lg:w-1/2 rounded-md border']">
       <button type="button" class="absolute right-0 w-6 h-6" @click="closeAlert()">×</button>
       <div class="flex items-center justify-center h-16">
-        <div
-          :class="[store.alertMessage.alertType === 'Error' ? 'text-red-600' : 'text-green-600']"
-        >
+        <div :class="[alertText]">
           {{ store.alertMessage.message }}
         </div>
       </div>

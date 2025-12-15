@@ -53,6 +53,7 @@ export function useRegisterFudepolyHandler(map: MapLibreMapRef, draw: DrawRef) {
         feature = f as Feature<Polygon>
       }
     } else {
+      // 筆ポリゴンの地物型はすべてPolygonだが（2025年版）タイル化した際にはMultiPolygonも含む場合あり
       const polygonFeatures = filteredFeatures.filter(
         (feature) =>
           feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon',

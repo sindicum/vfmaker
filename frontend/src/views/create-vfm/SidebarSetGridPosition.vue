@@ -14,6 +14,11 @@ const gridEW = defineModel('gridEW')
 const gridNS = defineModel('gridNS')
 const buffer = defineModel('buffer')
 
+interface Props {
+  gridCountProp: number
+}
+const props = defineProps<Props>()
+
 const { isDesktop } = useControlScreenWidth()
 
 const gridParams = {
@@ -142,8 +147,14 @@ const returnStep1 = () => {
           戻る
         </button>
         <button
-          class="p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white"
+          :class="[
+            props.gridCountProp > 2000
+              ? 'bg-slate-200 text-slate-500'
+              : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white',
+            'p-2 rounded-md ',
+          ]"
           @click="toStep3"
+          :disabled="props.gridCountProp > 2000"
         >
           進む
         </button>
