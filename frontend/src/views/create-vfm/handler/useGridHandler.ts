@@ -314,7 +314,9 @@ export function useGridHandler(map: MapLibreMapRef) {
     if (gridCount.value >= 1000 && gridCount.value <= 2000) {
       store.setMessage('Warn', 'グリッドが細かいので、グリッド幅を広げることを検討して下さい。')
     } else if (gridCount.value > 2000) {
-      throw new Error('グリッドが細かすぎて、グリッドを作成することができません')
+      throw new Error(
+        'グリッドが細かすぎるので、作成面積を小さくする・グリッド幅を広げる等してください。',
+      )
     }
 
     let current_point_feature = turfPoint([bbox_NW_coords[0], bbox_NW_coords[1]])
