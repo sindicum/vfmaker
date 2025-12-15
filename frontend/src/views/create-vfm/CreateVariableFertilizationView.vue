@@ -229,7 +229,7 @@ watch(step2Status, (currentStatus, previousStatus) => {
     if (humusStdDev.value !== null && humusMean.value != null) {
       const rawCv = (humusStdDev.value / humusMean.value) * 100
       const cv = Number.isFinite(rawCv) ? Math.round(rawCv) : 0
-      variableFertilizationRangeRate.value = cv
+      variableFertilizationRangeRate.value = cv * 2
     }
 
     const { features, areaSum, amountSum } = createVfm(
