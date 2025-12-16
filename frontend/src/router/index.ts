@@ -48,4 +48,14 @@ const router = createRouter({
   ],
 })
 
+// GA4 ページビュー計測
+router.afterEach((to) => {
+  if (typeof window.gtag === 'function' && import.meta.env.VITE_GA4_ID) {
+    window.gtag('event', 'page_view', {
+      page_path: to.fullPath,
+      page_title: (to.meta.title as string) || (to.name as string) || document.title,
+    })
+  }
+})
+
 export default router
