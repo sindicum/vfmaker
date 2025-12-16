@@ -58,4 +58,17 @@ router.afterEach((to) => {
   }
 })
 
+// 初回ページビューを送信
+router.isReady().then(() => {
+  if (typeof window.gtag === 'function' && import.meta.env.VITE_GA4_ID) {
+    window.gtag('event', 'page_view', {
+      page_path: router.currentRoute.value.fullPath,
+      page_title:
+        (router.currentRoute.value.meta.title as string) ||
+        (router.currentRoute.value.name as string) ||
+        document.title,
+    })
+  }
+})
+
 export default router
