@@ -2,6 +2,29 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <!-- GA4スクリプト -->
+    <script type="module">
+      const GA_ID = import.meta.env.VITE_GA4_ID
+
+      const s = document.createElement('script')
+      s.async = true
+      s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
+      document.head.appendChild(s)
+
+      window.dataLayer = window.dataLayer || []
+      function gtag() {
+        window.dataLayer.push(arguments)
+      }
+      window.gtag = gtag
+
+      gtag('js', new Date())
+
+      // devだけデバッグ扱いにする（DebugViewに出す）
+      if (import.meta.env.DEV) gtag('set', 'debug_mode', true)
+
+      // SPAなら自動PVは止めるのが無難
+      gtag('config', GA_ID, { send_page_view: false })
+    </script>
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
