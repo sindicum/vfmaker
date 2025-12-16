@@ -13,6 +13,7 @@ env:
   VITE_OM_MAP_URL: ${{ vars.VITE_OM_MAP_URL }}
   VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
   VITE_AWS_APIGATEWAY_KEY: ${{ secrets.VITE_AWS_APIGATEWAY_KEY }}
+  VITE_GA4_ID: ${{ secrets.VITE_GA4_ID }}
   ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
   BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
