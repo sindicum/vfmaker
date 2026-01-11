@@ -311,7 +311,10 @@ export function useGridHandler(map: MapLibreMapRef) {
     gridCount.value = bbox_rows * bbox_columns
 
     if (gridCount.value >= 1000 && gridCount.value <= 2000) {
-      notificationStore.showAlert('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
+      notificationStore.showAlert(
+        'Warn',
+        'グリッドが細かいので、マップ作成に時間がかかる場合があります。',
+      )
     } else if (gridCount.value > 2000) {
       throw new Error(
         'グリッド数が上限（2000）を超えているので、グリッドサイズを小さくしてください。',
