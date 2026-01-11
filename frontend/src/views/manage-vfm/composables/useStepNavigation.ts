@@ -22,6 +22,7 @@ export interface StepNavigationCallbacks {
 export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
   const currentStep = ref(1)
   const activeFeatureUuid = ref<string | null>(null)
+  const activeFeatureId = ref<number | null>(null)
   const activeVfmIndex = ref<number | null>(null)
 
   const buttonConfig = computed(() => {
@@ -132,6 +133,7 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
   // 初期状態に戻る
   const reset = () => {
     currentStep.value = 1
+    activeFeatureId.value = null
     activeFeatureUuid.value = null
     activeVfmIndex.value = null
   }
@@ -140,6 +142,7 @@ export const useStepNavigation = (callbacks: StepNavigationCallbacks = {}) => {
     // State
     buttonConfig,
     currentStep: readonly(currentStep),
+    activeFeatureId,
     activeFeatureUuid,
     activeVfmIndex,
 
