@@ -9,14 +9,14 @@ import {
   removePMTitlesLayer,
 } from './handler/LayerHandler'
 
-import { useStore } from '@/stores/store'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useNotificationStore } from '@/notifications'
 
 import type { MapLibreMap, Draw } from '@/types/map.type'
 import type { DrawFeature } from '@/types/fieldpolygon.type'
 import type { FeatureCollection } from 'geojson'
 
-const store = useStore()
+const notificationStore = useNotificationStore()
 const map = defineModel<MapLibreMap>('map')
 const draw = defineModel<Draw>('draw')
 const registerFudepolyActive = defineModel<boolean>('registerFudepolyActive')
@@ -73,18 +73,18 @@ function getDrawFeature(): DrawFeature | null {
   const snapshot = draw.value?.getSnapshot()
 
   if (!snapshot) {
-    store.setMessage('Error', MESSAGE.NOT_SELECTED)
+    notificationStore.showAlert('Error', MESSAGE.NOT_SELECTED)
     return null
   }
 
   if (snapshot.length === 0) {
-    store.setMessage('Error', MESSAGE.NOT_SELECTED)
+    notificationStore.showAlert('Error', MESSAGE.NOT_SELECTED)
     return null
   }
 
   const type = snapshot[0].geometry.type
   if (type !== 'Polygon') {
-    store.setMessage('Error', MESSAGE.NOPOLYGON_CREATED)
+    notificationStore.showAlert('Error', MESSAGE.NOPOLYGON_CREATED)
     return null
   }
 
@@ -111,9 +111,9 @@ const handleSelected = async (isSelect: boolean) => {
     await createField(field)
   } catch (error) {
     if (error instanceof Error) {
-      store.setMessage('Error', error.message)
+      notificationStore.showAlert('Error', error.message)
     } else {
-      store.setMessage('Error', '不明なエラーが発生しました')
+      notificationStore.showAlert('Error', '不明なエラーが発生しました')
     }
   }
 

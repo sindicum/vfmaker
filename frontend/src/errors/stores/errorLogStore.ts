@@ -13,9 +13,9 @@ const DUPLICATE_THRESHOLD = 5 * 60 * 1000
 // 自動クリーンアップの間隔（1時間）
 const CLEANUP_INTERVAL = 60 * 60 * 1000
 
-export const useErrorStore = defineStore('error', () => {
+export const useErrorLogStore = defineStore('errorLog', () => {
   const errors = ref<AppError[]>([])
-  let cleanupTimer: NodeJS.Timeout | null = null
+  let cleanupTimer: ReturnType<typeof setTimeout> | null = null
 
   const addError = (error: AppError) => {
     if (!error || !error.id || !error.timestamp) {

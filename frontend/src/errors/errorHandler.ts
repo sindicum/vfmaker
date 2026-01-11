@@ -1,5 +1,5 @@
-import { useStore } from '@/stores/store'
-import { useErrorStore } from '@/stores/errorStore'
+import { useNotificationStore } from '@/notifications'
+import { useErrorLogStore } from './stores/errorLogStore'
 import { ErrorSeverity, ErrorCategory } from './types'
 import type { AppError, ErrorHandlerOptions } from './types'
 import { DEFAULT_ERROR_MESSAGES } from './errorMessages'
@@ -17,8 +17,8 @@ const DEFAULT_OPTIONS: ErrorHandlerOptions = {
 }
 
 export function useErrorHandler() {
-  const store = useStore()
-  const errorStore = useErrorStore()
+  const notificationStore = useNotificationStore()
+  const errorLogStore = useErrorLogStore()
 
   // エラーハンドリングのメイン関数
   const handleError = (error: AppError, options?: Partial<ErrorHandlerOptions>) => {
@@ -28,40 +28,31 @@ export function useErrorHandler() {
     if (opts.logToStore) {
       const serializedError: AppError = {
         ...error,
-        originalError: error.originalError ? {
-          name: error.originalError.name || 'Unknown',
-          message: error.originalError.message || 'No message',
-          stack: error.originalError.stack?.slice(0, 1000),
-          // AggregateErrorの場合はerrorsも保存
-          ...(error.originalError instanceof AggregateError && {
-            errors: error.originalError.errors.slice(0, 10).map(e => ({
-              name: e.name || 'Unknown',
-              message: e.message || 'No message',
-              stack: e.stack?.slice(0, 500)
-            }))
-          })
-        } as any : undefined
+        originalError: error.originalError
+          ? {
+              name: error.originalError.name || 'Unknown',
+              message: error.originalError.message || 'No message',
+              stack: error.originalError.stack?.slice(0, 1000),
+            }
+          : undefined,
       }
-      errorStore.addError(serializedError)
+      errorLogStore.addError(serializedError)
     }
 
     // コンソールログ
     if (opts.logToConsole) {
       const logLevel = getLogLevel(error.severity)
-      console[logLevel](
-        `[${error.category.toUpperCase()}] ${error.message}`,
-        {
-          error: error.originalError,
-          context: error.context,
-          timestamp: error.timestamp,
-        }
-      )
+      console[logLevel](`[${error.category.toUpperCase()}] ${error.message}`, {
+        error: error.originalError,
+        context: error.context,
+        timestamp: error.timestamp,
+      })
     }
 
     // ユーザー通知
     if (opts.showUserNotification && error.severity !== ErrorSeverity.LOW) {
       const alertType = getAlertType(error.severity)
-      store.setMessage(alertType, error.userMessage)
+      notificationStore.showAlert(alertType, error.userMessage)
     }
 
     // カテゴリ別の追加処理
@@ -85,9 +76,7 @@ export function useErrorHandler() {
 
   // エラー重要度に基づくアラートタイプを取得
   const getAlertType = (severity: ErrorSeverity): 'Info' | 'Error' => {
-    return severity === ErrorSeverity.HIGH || severity === ErrorSeverity.CRITICAL
-      ? 'Error'
-      : 'Info'
+    return severity === ErrorSeverity.HIGH || severity === ErrorSeverity.CRITICAL ? 'Error' : 'Info'
   }
 
   // カテゴリ別のエラー処理
@@ -99,17 +88,17 @@ export function useErrorHandler() {
           console.warn('オフライン状態です。ネットワーク接続を確認してください。')
         }
         break
-      
+
       case ErrorCategory.PERMISSION:
         // 権限エラーの追加処理
         // 必要に応じて再認証画面へのリダイレクトなど
         break
-      
+
       case ErrorCategory.VALIDATION:
         // バリデーションエラーの追加処理
         // フォームのエラー表示など
         break
-      
+
       default:
         // その他のエラー
         break
@@ -120,7 +109,7 @@ export function useErrorHandler() {
   const handleErrorWithRetry = async <T>(
     operation: () => Promise<T>,
     createError: (error: Error) => AppError,
-    options?: Partial<ErrorHandlerOptions>
+    options?: Partial<ErrorHandlerOptions>,
   ): Promise<T | undefined> => {
     const opts = { ...DEFAULT_OPTIONS, ...options }
     let lastError: Error | undefined
@@ -142,12 +131,12 @@ export function useErrorHandler() {
         return await operation()
       } catch (error) {
         lastError = error as Error
-        
+
         if (attempt < maxAttempts) {
           if (opts.logToConsole) {
             console.warn(`リトライ ${attempt}/${maxAttempts} - ${delay}ms後に再試行します`)
           }
-          await new Promise(resolve => setTimeout(resolve, delay * attempt))
+          await new Promise((resolve) => setTimeout(resolve, delay * attempt))
         }
       }
     }

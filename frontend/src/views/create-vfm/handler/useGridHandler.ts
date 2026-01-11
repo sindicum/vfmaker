@@ -21,7 +21,7 @@ import { addHumusGrid, addBaseGrid, addHumusRaster } from '../../common/handler/
 import { useErrorHandler, createGeospatialError } from '@/errors'
 
 import { useConfigPersistStore } from '@/stores/configPersistStore'
-import { useStore } from '@/stores/store'
+import { useNotificationStore } from '@/notifications'
 
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import type { ReadRasterResult } from 'geotiff'
@@ -40,7 +40,7 @@ import type { FieldPolygonFeatureCollection, FieldPolygonFeature } from '@/types
  */
 export function useGridHandler(map: MapLibreMapRef) {
   const configPersistStore = useConfigPersistStore()
-  const store = useStore()
+  const notificationStore = useNotificationStore()
 
   const baseFeatureCollection: FieldPolygonFeatureCollection = {
     type: 'FeatureCollection',
@@ -114,9 +114,9 @@ export function useGridHandler(map: MapLibreMapRef) {
       }
     } catch (error) {
       if (error instanceof Error) {
-        store.setMessage('Error', error.message)
+        notificationStore.showAlert('Error', error.message)
       } else {
-        store.setMessage('Error', '不明なエラーが発生しました')
+        notificationStore.showAlert('Error', '不明なエラーが発生しました')
       }
     }
   })
@@ -188,8 +188,7 @@ export function useGridHandler(map: MapLibreMapRef) {
     const humusPointGridBbox = getHumusPointGridBbox(bbox4326, cogSource)
 
     if (!activeFeatureBufferComputed.value) {
-      store.alertMessage.alertType = 'Error'
-      store.alertMessage.message = 'ポリゴン処理に失敗しました'
+      notificationStore.showAlert('Error', 'ポリゴン処理に失敗しました')
       return
     }
 
@@ -238,9 +237,9 @@ export function useGridHandler(map: MapLibreMapRef) {
       addBaseGrid(mapInstance, baseGrid.value)
     } catch (error) {
       if (error instanceof Error) {
-        store.setMessage('Error', error.message)
+        notificationStore.showAlert('Error', error.message)
       } else {
-        store.setMessage('Error', '不明なエラーが発生しました')
+        notificationStore.showAlert('Error', '不明なエラーが発生しました')
       }
     }
   }
@@ -312,7 +311,7 @@ export function useGridHandler(map: MapLibreMapRef) {
     gridCount.value = bbox_rows * bbox_columns
 
     if (gridCount.value >= 1000 && gridCount.value <= 2000) {
-      store.setMessage('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
+      notificationStore.showAlert('Warn', 'グリッドが細かいので、マップ作成に時間がかかる場合があります。')
     } else if (gridCount.value > 2000) {
       throw new Error(
         'グリッド数が上限（2000）を超えているので、グリッドサイズを小さくしてください。',

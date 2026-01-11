@@ -5,12 +5,12 @@ import { usePolygonFeature } from './composables/usePolygonFeature'
 import { addEditLayer, FILL_LAYER_NAME } from './handler/LayerHandler'
 
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
-import { useStore } from '@/stores/store'
+import { useNotificationStore } from '@/notifications'
 
 import type { MapLibreMap, Draw } from '@/types/map.type'
 import type { FeatureCollection } from 'geojson'
 
-const store = useStore()
+const notificationStore = useNotificationStore()
 const { readAllFields, readField, updateField } = useStoreHandler()
 const { getPolygonFromSnapshot, createUpdateField } = usePolygonFeature()
 
@@ -32,17 +32,17 @@ async function updateRegisteredPolygon() {
 
   const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
   if (hasLayer) {
-    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    notificationStore.showAlert('Error', '筆ポリゴンを選択して下さい')
     return
   }
   if (!updatePolygonId.value) {
-    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    notificationStore.showAlert('Error', '筆ポリゴンを選択して下さい')
     return
   }
 
   const f = await readField(updatePolygonId.value)
   if (!f) {
-    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    notificationStore.showAlert('Error', '筆ポリゴンを選択して下さい')
     return
   }
   memo.value = f.properties.memo
@@ -59,7 +59,7 @@ function updateClearEditLayer() {
 
   const hasLayer = mapInstance.getLayer(FILL_LAYER_NAME)
   if (hasLayer) {
-    store.setMessage('Error', '筆ポリゴンを選択して下さい')
+    notificationStore.showAlert('Error', '筆ポリゴンを選択して下さい')
     return
   }
   if (updatePolygonId.value === null) return
@@ -92,12 +92,12 @@ const handleSelected = async (isSelect: boolean) => {
   try {
     const field = createUpdateField(feature, memo.value)
     await updateField(updatePolygonId.value, field)
-    store.setMessage('Info', 'ポリゴンを更新しました')
+    notificationStore.showAlert('Info', 'ポリゴンを更新しました')
   } catch (error) {
     if (error instanceof Error) {
-      store.setMessage('Error', error.message)
+      notificationStore.showAlert('Error', error.message)
     } else {
-      store.setMessage('Error', '不明なエラーが発生しました')
+      notificationStore.showAlert('Error', '不明なエラーが発生しました')
     }
   }
 

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useErrorStore } from '@/stores/errorStore'
+import { useErrorLogStore } from '@/errors'
 import { ErrorCategory, ErrorSeverity } from '@/errors/types'
 
 interface AggregateErrorType extends Error {
   errors: unknown[]
 }
 
-const errorStore = useErrorStore()
+const errorLogStore = useErrorLogStore()
 
 // フィルタの状態
 const selectedCategory = ref<ErrorCategory | 'all'>('all')
@@ -17,7 +17,7 @@ const expandedErrors = ref<Record<string, boolean>>({})
 // フィルタされたエラー
 const filteredErrors = computed(() => {
   try {
-    return errorStore.errors
+    return errorLogStore.errors
       .filter((error) => {
         if (!error || !error.id) return false // nullチェック
         if (selectedCategory.value !== 'all' && error.category !== selectedCategory.value) {
@@ -48,7 +48,7 @@ const toggleError = (errorId: string) => {
 // エラーのクリア
 const clearAllErrors = () => {
   if (confirm('すべてのエラーログをクリアしてもよろしいですか？')) {
-    errorStore.clearErrors()
+    errorLogStore.clearErrors()
   }
 }
 

@@ -5,12 +5,12 @@ import Dialog from '@/components/common/components/Dialog.vue'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
-import { useStore } from '@/stores/store'
+import { useNotificationStore } from '@/notifications'
 
 import type { MapLibreMap } from '@/types/map.type'
 import type { FeatureCollection } from 'geojson'
 
-const store = useStore()
+const notificationStore = useNotificationStore()
 
 const map = defineModel<MapLibreMap>('map')
 const deletePolygonId = defineModel<number | null>('deletePolygonId')
@@ -27,14 +27,14 @@ const { readAllFields, deleteField, deleteAllFields, allFieldsCount } = useStore
 // 選択したポリゴンの削除
 async function deleteRegisteredPolygon() {
   if (deletePolygonId.value === null || deletePolygonId.value === undefined) {
-    store.setMessage('Error', 'ポリゴンを選択してください')
+    notificationStore.showAlert('Error', 'ポリゴンを選択してください')
     return
   }
   const mapInstance = map?.value
   if (!mapInstance) return
 
   await deleteField(deletePolygonId.value)
-  store.setMessage('Info', 'ポリゴンを削除しました')
+  notificationStore.showAlert('Info', 'ポリゴンを削除しました')
 
   fieldPolygonFeatureCollection.value = await readAllFields()
 
@@ -50,7 +50,7 @@ async function deleteAllPolygon() {
   const fieldsCount = await allFieldsCount()
 
   if (fieldsCount === 0) {
-    store.setMessage('Error', 'ポリゴンがありません')
+    notificationStore.showAlert('Error', 'ポリゴンがありません')
     return
   }
 
@@ -71,8 +71,7 @@ const selectedDialog = async (selected: boolean) => {
     await deleteAllFields()
     fieldPolygonFeatureCollection.value = await readAllFields()
 
-    store.alertMessage.alertType = 'Info'
-    store.alertMessage.message = `ポリゴンをすべて削除しました`
+    notificationStore.showAlert('Info', 'ポリゴンをすべて削除しました')
   }
 
   isOpenDialog.value = false
