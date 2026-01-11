@@ -10,9 +10,10 @@ const gridParams = {
   baseFertilizationAmount: { min: 1, max: 999 },
   variableFertilizationRangeRate: { min: 0, max: 100 },
 }
+
 const dialogName = defineModel<DialogType>('dialogName')
 const inputNumber = ref('0')
-const negativeSign = ref(false)
+const hasFunctionButtonUsed = ref(false)
 
 const gridRotationAngle = defineModel('gridRotationAngle')
 const gridEW = defineModel('gridEW')
@@ -21,109 +22,74 @@ const buffer = defineModel('buffer')
 const baseFertilizationAmount = defineModel('baseFertilizationAmount')
 const variableFertilizationRangeRate = defineModel('variableFertilizationRangeRate')
 
+// モデルマップ: dialogName から対応するモデルへの参照
+const modelMap = {
+  rotationAngle: gridRotationAngle,
+  gridEW: gridEW,
+  gridNS: gridNS,
+  buffer: buffer,
+  baseFertilizationAmount: baseFertilizationAmount,
+  variableFertilizationRangeRate: variableFertilizationRangeRate,
+}
+
 const inputMaxNumber = computed(() => {
   const currentDialog = dialogName.value
-  if (currentDialog === 'rotationAngle') {
-    return gridParams.rotationAngle.max
-  }
-  if (currentDialog === 'gridEW') {
-    return gridParams.gridEW.max
-  }
-  if (currentDialog === 'gridNS') {
-    return gridParams.gridNS.max
-  }
-  if (currentDialog === 'buffer') {
-    return gridParams.buffer.max
-  }
-  if (currentDialog === 'baseFertilizationAmount') {
-    return gridParams.baseFertilizationAmount.max
-  }
-  if (currentDialog === 'variableFertilizationRangeRate') {
-    return gridParams.variableFertilizationRangeRate.max
-  }
-  return 999
+  if (!currentDialog) return 999
+  return gridParams[currentDialog].max
 })
 
 const inputMinNumber = computed(() => {
   const currentDialog = dialogName.value
-  if (currentDialog === 'rotationAngle') {
-    return gridParams.rotationAngle.min
-  }
-  if (currentDialog === 'gridEW') {
-    return gridParams.gridEW.min
-  }
-  if (currentDialog === 'gridNS') {
-    return gridParams.gridNS.min
-  }
-  if (currentDialog === 'buffer') {
-    return gridParams.buffer.min
-  }
-  if (currentDialog === 'baseFertilizationAmount') {
-    return gridParams.baseFertilizationAmount.min
-  }
-  if (currentDialog === 'variableFertilizationRangeRate') {
-    return gridParams.variableFertilizationRangeRate.min
-  }
-  return 0
+  if (!currentDialog) return 0
+  return gridParams[currentDialog].min
 })
+
+// ダイアログのリセット
+const resetDialog = () => {
+  dialogName.value = ''
+  inputNumber.value = '0'
+  hasFunctionButtonUsed.value = false
+}
 
 // 入力内容の確定
 const inputNum = (currentDialog: DialogType | undefined) => {
-  // undefinedハンドリング
-  if (!currentDialog) return
+  if (!currentDialog || !(currentDialog in modelMap)) return
 
   const num = Number(inputNumber.value)
-  let applyNumber
-  if (num > inputMaxNumber.value) {
-    applyNumber = inputMaxNumber.value
-  } else if (num < inputMinNumber.value) {
-    applyNumber = inputMinNumber.value
-  } else {
-    applyNumber = num
-  }
+  const applyNumber = Math.min(Math.max(num, inputMinNumber.value), inputMaxNumber.value)
 
-  if (currentDialog === 'rotationAngle') {
-    gridRotationAngle.value = applyNumber
-  }
-  if (currentDialog === 'gridEW') {
-    gridEW.value = applyNumber
-  }
-  if (currentDialog === 'gridNS') {
-    gridNS.value = applyNumber
-  }
-  if (currentDialog === 'buffer') {
-    buffer.value = applyNumber
-  }
-  if (currentDialog === 'baseFertilizationAmount') {
-    baseFertilizationAmount.value = applyNumber
-  }
-  if (currentDialog === 'variableFertilizationRangeRate') {
-    variableFertilizationRangeRate.value = applyNumber
-  }
-  dialogName.value = ''
-  inputNumber.value = '0'
-  negativeSign.value = false
+  modelMap[currentDialog].value = applyNumber
+  resetDialog()
 }
 
 const onClickNumBtn = (num: string) => {
   inputNumber.value += num
-  negativeSign.value = true
+  // rotationAngle以外は機能ボタン（-）を使用済みにする
+  if (dialogName.value !== 'rotationAngle') {
+    hasFunctionButtonUsed.value = true
+  }
 }
 
 const onClickClearBtn = () => {
   inputNumber.value = '0'
-  negativeSign.value = false
+  hasFunctionButtonUsed.value = false
 }
 
-const onClickMinusBtn = () => {
-  inputNumber.value = '-'
-  negativeSign.value = true
+const onClickFunctionBtn = () => {
+  if (dialogName.value === 'buffer') {
+    inputNumber.value = '-'
+    hasFunctionButtonUsed.value = true
+    return
+  }
+  if (dialogName.value === 'rotationAngle') {
+    inputNumber.value += '.'
+    hasFunctionButtonUsed.value = true
+    return
+  }
 }
 
 const closeDialog = () => {
-  dialogName.value = ''
-  inputNumber.value = '0'
-  negativeSign.value = false
+  resetDialog()
 }
 </script>
 
@@ -191,24 +157,30 @@ const closeDialog = () => {
           >
             3
           </button>
+          <!-- 機能ボタン（-/.）or 空のプレースホルダー -->
           <button
-            v-if="inputMinNumber < 0"
+            v-if="dialogName === 'buffer' || dialogName === 'rotationAngle'"
             :class="[
-              negativeSign ? 'bg-white text-white border-white' : 'bg-slate-50 hover:bg-slate-100 ',
+              hasFunctionButtonUsed
+                ? 'bg-white text-white border-white'
+                : 'bg-slate-50 hover:bg-slate-100 ',
               'border w-full h-12 text-center rounded-md ',
             ]"
-            @click="onClickMinusBtn"
-            :disabled="negativeSign"
+            @click="onClickFunctionBtn"
+            :disabled="hasFunctionButtonUsed"
           >
-            -
+            <span v-if="dialogName === 'buffer'">-</span>
+            <span v-else>.</span>
           </button>
           <span v-else></span>
+          <!-- 0ボタン（常に中央） -->
           <button
             class="border w-full h-12 hover:bg-slate-50 rounded-md"
             @click="onClickNumBtn('0')"
           >
             0
           </button>
+          <!-- Cボタン（常に右） -->
           <button
             class="border w-full h-12 text-center rounded-md bg-slate-50 hover:bg-slate-100"
             @click="onClickClearBtn"

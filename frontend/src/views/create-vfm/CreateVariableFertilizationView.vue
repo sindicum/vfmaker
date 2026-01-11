@@ -75,6 +75,7 @@ const {
   gridEW,
   gridNS,
   buffer,
+  gridOrigin,
   gridCount,
   humusMean,
   humusStdDev,
@@ -151,8 +152,6 @@ watch(step1Status, (currentStatus, previousStatus) => {
   }
   // Step2 or Step3 -> Step1
   if (currentStatus === 'current') {
-    // バッファーの初期化（グリッド幅はユーザー設定を生かす）
-    buffer.value = 0
     isInEdit.value = false
     activeFeatureId.value = null
   }
@@ -416,6 +415,7 @@ function delayedUpdateSidebar(refVar: { value: string }, newValue: string) {
             v-model:grid-e-w="gridEW"
             v-model:grid-n-s="gridNS"
             v-model:buffer="buffer"
+            v-model:grid-origin="gridOrigin"
             :gridCountProp="gridCount"
           />
         </li>
