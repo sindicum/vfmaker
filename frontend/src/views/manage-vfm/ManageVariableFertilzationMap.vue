@@ -62,6 +62,7 @@ const { readAllFields, readAllVfmMaps, deleteVfmMap } = useStoreHandler()
 const {
   currentStep,
   buttonConfig,
+  activeFeatureId,
   activeFeatureUuid,
   activeVfmIndex,
   nextStep,
@@ -163,6 +164,63 @@ watch(isLoadIndexedDB, (current) => {
   }
 })
 
+// 現在位置の緯度経度が変更された時の処理
+watch(
+  () => store.currentGeolocation,
+  () => {
+    getCurrentLocationFertilizerAmount()
+  },
+)
+
+// マップの背景地図切り替え時の処理
+watch(
+  () => store.mapStyleIndex,
+  () => {
+    const mapInstance = map?.value
+    if (!mapInstance) return
+
+    mapInstance.once('idle', () => {
+      addSource(mapInstance, featureCollection.value)
+      addLayer(mapInstance)
+
+      if (activeVfmIndex.value !== null && activeVfm.value) {
+        addVraMap(mapInstance, activeVfm.value)
+      }
+    })
+  },
+)
+
+// 削除ボタン押下時の処理
+watch(isDeleteVfm, async (newValue) => {
+  if (!newValue) return // falseの時は何もしない（isDeleteVfm.value = falseでのトリガー回避）
+
+  const mapInstance = map?.value
+  if (!mapInstance) return
+  if (!activeVfmId.value) return
+
+  await deleteVfmMap(activeVfmId.value)
+  removeVraMap(mapInstance)
+  vfms.value = await readAllVfmMaps()
+  activeVfm.value = null
+  const res = await readAllFields()
+  featureCollection.value = res
+
+  previousStep()
+  isDeleteVfm.value = false
+})
+
+watch(activeFeatureId, (newId, prevId) => {
+  const mapInstance = map?.value
+  if (!mapInstance) return
+
+  if (prevId !== null && prevId !== undefined) {
+    mapInstance.setFeatureState({ source: 'registeredFields', id: prevId }, { selected: false })
+  }
+  if (newId !== null && prevId !== undefined) {
+    mapInstance.setFeatureState({ source: 'registeredFields', id: newId }, { selected: true })
+  }
+})
+
 function handleMapLoad() {
   const mapInstance = map?.value
   if (!mapInstance) return
@@ -178,11 +236,13 @@ function mapClickHandler(e: MapLayerMouseEvent) {
   if (!showStep1.value) return
 
   const uuid = e.features?.[0]?.properties.uuid
-  if (uuid == null) return
+  const id = e.features?.[0]?.properties.id
+  if (uuid == null || id == null) return
   activeFeatureUuid.value = uuid
+  activeFeatureId.value = id
 }
 
-const addVfm = (vfms_string: string, vfms_id: number, index: number) => {
+function addVfm(vfms_string: string, vfms_id: number, index: number) {
   const mapInstance = map?.value
   if (!mapInstance) return
 
@@ -195,7 +255,7 @@ const addVfm = (vfms_string: string, vfms_id: number, index: number) => {
   addVraMap(mapInstance, activeVfm.value)
 }
 
-const exportVfm = async () => {
+async function exportVfm() {
   const mapInstance = map?.value
   if (!mapInstance) return
   const vfm = activeVfm.value
@@ -315,7 +375,7 @@ function isPolyLike(f: Feature | undefined): f is Feature<Polygon> {
   return !!f && !!f.geometry && f.geometry.type === 'Polygon'
 }
 
-const getCurrentLocationFertilizerAmount = () => {
+function getCurrentLocationFertilizerAmount() {
   if (!activeVfm.value || !activeFeatureUuid.value) return
 
   // 現在位置の緯度経度を取得
@@ -355,7 +415,7 @@ const getCurrentLocationFertilizerAmount = () => {
   currentFertilizerAmount.value = containing.properties.amount_fertilization_unit || null
 }
 
-const fitToPolygon = (feature: Feature<Polygon>) => {
+function fitToPolygon(feature: Feature<Polygon>) {
   if (!feature.properties) return
 
   activeFeatureUuid.value = feature.properties.uuid
@@ -403,6 +463,8 @@ const fitToPolygon = (feature: Feature<Polygon>) => {
       padding: 20, // 最小限のパディング
       duration: 1000, // アニメーション時間（ミリ秒）
     })
+
+    activeFeatureId.value = feature.properties.id
   } catch (error) {
     handleError(
       createGeospatialError('Map bounds calculation failed', error as Error, {
@@ -414,7 +476,7 @@ const fitToPolygon = (feature: Feature<Polygon>) => {
   }
 }
 
-const fitToAllView = () => {
+function fitToAllView() {
   const mapInstance = map?.value
   if (!mapInstance) return
 
@@ -426,52 +488,7 @@ const fitToAllView = () => {
   })
 }
 
-// 現在位置の緯度経度が変更された時の処理
-watch(
-  () => store.currentGeolocation,
-  () => {
-    getCurrentLocationFertilizerAmount()
-  },
-)
-
-// マップの背景地図切り替え時の処理
-watch(
-  () => store.mapStyleIndex,
-  () => {
-    const mapInstance = map?.value
-    if (!mapInstance) return
-
-    mapInstance.once('idle', () => {
-      addSource(mapInstance, featureCollection.value)
-      addLayer(mapInstance)
-
-      if (activeVfmIndex.value !== null && activeVfm.value) {
-        addVraMap(mapInstance, activeVfm.value)
-      }
-    })
-  },
-)
-
-// 削除ボタン押下時の処理
-watch(isDeleteVfm, async (newValue) => {
-  if (!newValue) return // falseの時は何もしない（isDeleteVfm.value = falseでのトリガー回避）
-
-  const mapInstance = map?.value
-  if (!mapInstance) return
-  if (!activeVfmId.value) return
-
-  await deleteVfmMap(activeVfmId.value)
-  removeVraMap(mapInstance)
-  vfms.value = await readAllVfmMaps()
-  activeVfm.value = null
-  const res = await readAllFields()
-  featureCollection.value = res
-
-  previousStep()
-  isDeleteVfm.value = false
-})
-
-const runRealtimeVfm = () => {
+function runRealtimeVfm() {
   if (!store.isTracking) {
     store.geolocateControl?.trigger()
   }
@@ -480,13 +497,14 @@ const runRealtimeVfm = () => {
   }, 300)
 }
 
-const stopRealtimeVfm = () => {
+function stopRealtimeVfm() {
   if (store.isTracking) {
     store.geolocateControl?.trigger()
   }
   showRealtimeVfm.value = false
 }
 
+// useStepNavigationに渡すコールバック関数（Step1のバリデーション）
 function validateStep1() {
   const vfmsLength = featureCollection.value.features.find(
     (feature) => feature.properties.uuid === activeFeatureUuid.value,
@@ -503,17 +521,20 @@ function validateStep1() {
   return true
 }
 
-// 戻る際の遷移処理
+// useStepNavigationに渡すコールバック関数（戻る際の遷移処理）
 function onBackwardToStep1() {
   activeVfmIndex.value = null
   if (map?.value) removeVraMap(map?.value)
 }
 
+// useStepNavigationに渡すコールバック関数（選択クリア）
 function onClearSelection() {
+  activeFeatureId.value = null
   activeFeatureUuid.value = null
   fitToAllView()
 }
 
+// useStepNavigationに渡すコールバック関数（処理実行）
 function onExecuteAction() {
   if (selectedAction.value === 'exportVfm') {
     exportVfm()
@@ -586,11 +607,11 @@ const selectedDialog = (selected: boolean) => {
                   :key="index"
                   :class="[
                     activeFeatureUuid === feature.properties.uuid
-                      ? 'bg-amber-50'
-                      : 'cursor-pointer transition-colors duration-200 bg-white',
+                      ? 'bg-amber-100'
+                      : 'cursor-pointer transition-colors duration-200 bg-white hover:bg-amber-50',
                   ]"
                   @click="fitToPolygon(feature)"
-                  title="クリックして地図上の位置を表示"
+                  title="クリックしてポリゴンを選択"
                 >
                   <td class="px-3 py-2">
                     <div class="flex items-center justify-center">
@@ -634,8 +655,8 @@ const selectedDialog = (selected: boolean) => {
                     :key="index"
                     :class="[
                       activeVfmIndex === index
-                        ? 'bg-amber-50'
-                        : 'cursor-pointer transition-colors duration-200 bg-white',
+                        ? 'bg-amber-100'
+                        : 'cursor-pointer transition-colors duration-200 bg-white hover:bg-amber-50',
                     ]"
                     @click="addVfm(vfm.vfm, vfm.id, index)"
                     v-show="vfm.uuid === activeFeatureUuid"
