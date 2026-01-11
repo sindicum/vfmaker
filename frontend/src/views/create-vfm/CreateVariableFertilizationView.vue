@@ -151,8 +151,6 @@ watch(step1Status, (currentStatus, previousStatus) => {
   }
   // Step2 or Step3 -> Step1
   if (currentStatus === 'current') {
-    // バッファーの初期化（グリッド幅はユーザー設定を生かす）
-    buffer.value = 0
     isInEdit.value = false
     activeFeatureId.value = null
   }
