@@ -2,16 +2,16 @@
 import { ref, toRaw } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
-import { useStore } from '@/stores/store'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useNotificationStore } from '@/notifications'
 
 import type { DialogType } from '@/types/common.type'
 import type { FieldPolygonFeature } from '@/types/fieldpolygon.type'
 import type { VfmapFeature } from '@/types/vfm.type'
 
 const currentDialogName = ref<DialogType>('')
-const store = useStore()
+const notificationStore = useNotificationStore()
 
 const area = defineModel<number>('area')
 const step3Status = defineModel<string>('step3Status')
@@ -49,7 +49,7 @@ const returnStep2 = () => {
 // 保存処理を実行
 const executeSave = async () => {
   if (!activeFeature.value?.properties.uuid) {
-    store.setMessage('Error', '圃場が選択されていません')
+    notificationStore.showAlert('Error', '圃場が選択されていません')
     return
   }
 
@@ -70,10 +70,10 @@ const executeSave = async () => {
     .then(() => {
       step3Status.value = 'complete'
       vfmMemo.value = ''
-      store.setMessage('Info', '可変施肥マップを保存しました')
+      notificationStore.showAlert('Info', '可変施肥マップを保存しました')
     })
     .catch((error) => {
-      store.setMessage('Error', error)
+      notificationStore.showAlert('Error', error)
       console.error(error)
       step3Status.value = 'upcoming'
       vfmMemo.value = ''

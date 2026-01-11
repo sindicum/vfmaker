@@ -16,3 +16,9 @@ export {
 
 // エラーメッセージのエクスポート
 export { DEFAULT_ERROR_MESSAGES, SPECIFIC_ERROR_MESSAGES } from './errorMessages'
+
+// コンポーネントのエクスポート
+export { default as ErrorBoundary } from './components/ErrorBoundary.vue'
+
+// ストアのエクスポート
+export { useErrorLogStore } from './stores/errorLogStore'

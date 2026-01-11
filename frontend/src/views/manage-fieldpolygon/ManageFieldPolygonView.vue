@@ -37,6 +37,7 @@ import { getGeoJSONSource } from '@/views/common/composables/useMapSoruce'
 
 import { useStore } from '@/stores/store'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useNotificationStore } from '@/notifications'
 
 import type { MapLibreMapRef, Draw } from '@/types/map.type'
 import type { FeatureCollection } from 'geojson'
@@ -46,6 +47,7 @@ if (!map) throw new Error('Map instance not provided')
 const draw = shallowRef<Draw>(null)
 
 const store = useStore()
+const notificationStore = useNotificationStore()
 const mapLoaded = ref(false)
 const createPolygonActive = ref(false)
 const registerFudepolyActive = ref(false)
@@ -198,7 +200,7 @@ watch(registerFudepolyActive, (isActive) => {
   const zoomLevel = mapInstance.getZoom()
 
   if (zoomLevel <= 8) {
-    store.setMessage('Error', '筆ポリゴンが表示されるズームレベルは8以上です')
+    notificationStore.showAlert('Error', '筆ポリゴンが表示されるズームレベルは8以上です')
     registerFudepolyActive.value = false
   }
 

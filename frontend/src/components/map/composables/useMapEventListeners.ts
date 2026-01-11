@@ -30,7 +30,6 @@ export function useMapEventListeners({ mapStyleProperty, map }: UseMapEventListe
           zoom: persistStore.centerPosition.zoom,
           errorType: e.type,
           errorMessage: e.error?.message || 'Unknown map error',
-          sourceId: e.sourceId || null,
         }),
       )
     })

@@ -14,6 +14,7 @@ import ExportFileConfigComp from './components/ExportFileConfigComp.vue'
 import { useStore } from '@/stores/store'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useNotificationStore } from '@/notifications'
 
 import {
   bbox as turfBbox,
@@ -54,6 +55,7 @@ import type { VfmMapDB } from '@/types/indexedDb.type'
 const { isDesktop } = useControlScreenWidth()
 const store = useStore()
 const configPersistStore = useConfigPersistStore()
+const notificationStore = useNotificationStore()
 const { handleError } = useErrorHandler()
 
 const { readAllFields, readAllVfmMaps, deleteVfmMap } = useStoreHandler()
@@ -115,13 +117,17 @@ const vfms = ref<VfmMapDB[]>([])
 const isLoadIndexedDB = ref(false)
 
 onBeforeMount(async () => {
-  const res = await readAllFields()
-  featureCollection.value = res
-  vfms.value = await readAllVfmMaps()
-  isLoadIndexedDB.value = true
+  try {
+    const res = await readAllFields()
+    featureCollection.value = res
+    vfms.value = await readAllVfmMaps()
+    isLoadIndexedDB.value = true
+  } catch (error) {
+    console.error('Failed to load data from IndexedDB:', error)
+  }
 })
 
-onMounted(async () => {
+onMounted(() => {
   const mapInstance = map?.value
   if (!mapInstance) return
 
@@ -274,7 +280,7 @@ const exportVfm = async () => {
       reset()
       removeVraMap(mapInstance)
       setTimeout(() => {
-        store.setMessage('Info', '可変施肥マップを出力しました')
+        notificationStore.showAlert('Info', '可変施肥マップを出力しました')
       }, 1000)
     }
   } catch (error) {
@@ -487,11 +493,11 @@ function validateStep1() {
   )?.properties.vfm_count
 
   if (vfmsLength === 0) {
-    store.setMessage('Error', 'ポリゴンにVFマップが登録されていません')
+    notificationStore.showAlert('Error', 'ポリゴンにVFマップが登録されていません')
     return false
   }
   if (activeFeatureUuid.value === null) {
-    store.setMessage('Error', 'ポリゴンが選択されていません')
+    notificationStore.showAlert('Error', 'ポリゴンが選択されていません')
     return false
   }
   return true

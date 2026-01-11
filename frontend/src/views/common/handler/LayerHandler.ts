@@ -43,7 +43,12 @@ export function addLayer(map: MapLibreMap) {
     type: 'line',
     source: 'registeredFields',
     paint: {
-      'line-color': 'blue',
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        'red', // 選択中
+        'blue', // 通常
+      ],
       'line-opacity': 0.6,
       'line-width': 3,
     },

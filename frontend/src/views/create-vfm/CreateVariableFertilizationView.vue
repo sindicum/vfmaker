@@ -36,6 +36,7 @@ import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
 import { useStore } from '@/stores/store'
 import { useConfigPersistStore } from '@/stores/configPersistStore'
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
+import { useNotificationStore } from '@/notifications'
 
 import type { MapLibreMapRef } from '@/types/map.type'
 import type { Feature, Polygon } from 'geojson'
@@ -50,6 +51,7 @@ if (!map) throw new Error('Map instance not provided')
 
 const store = useStore()
 const configPersistStore = useConfigPersistStore()
+const notificationStore = useNotificationStore()
 const { readAllFields } = useStoreHandler()
 
 const { isDesktop } = useControlScreenWidth()
@@ -349,7 +351,7 @@ async function mapClickHandler(e: MapMouseEvent) {
   if (isInEdit.value) return
   isInEdit.value = true
   await onClickField(e).catch((error) => {
-    store.setMessage('Error', error)
+    notificationStore.showAlert('Error', error)
   })
   step1Status.value = 'complete'
   activeFeatureId.value = activeFeature.value?.properties.id ?? null

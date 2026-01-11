@@ -7,7 +7,7 @@ import { usePolygonFeature } from '../composables/usePolygonFeature'
 import { useErrorHandler, createValidationError } from '@/errors'
 
 import { useStoreHandler } from '@/stores/indexedDbStoreHandler'
-import { useStore } from '@/stores/store'
+import { useNotificationStore } from '@/notifications'
 
 import type { Feature, FeatureCollection } from 'geojson'
 
@@ -16,7 +16,7 @@ const fieldPolygonFeatureCollection = defineModel<FeatureCollection>(
   'fieldPolygonFeatureCollection',
 )
 
-const store = useStore()
+const notificationStore = useNotificationStore()
 
 const { handleError } = useErrorHandler()
 const { maxFields, createField, allFieldsCount, readAllFields } = useStoreHandler()
@@ -40,7 +40,7 @@ const handleUpload = async () => {
   const maxFeatures = maxFields
 
   if (!selectedFile.value) {
-    store.setMessage('Error', 'ファイルを選択してください')
+    notificationStore.showAlert('Error', 'ファイルを選択してください')
     return
   }
 
@@ -69,7 +69,7 @@ const handleUpload = async () => {
     )
 
     if (polygonFeatures.length === 0) {
-      store.setMessage('Error', 'ポリゴンデータが含まれていません')
+      notificationStore.showAlert('Error', 'ポリゴンデータが含まれていません')
       return
     }
 
@@ -107,12 +107,12 @@ const handleUpload = async () => {
     fieldPolygonFeatureCollection.value = await readAllFields()
 
     if (addedCount > 0) {
-      store.setMessage(
+      notificationStore.showAlert(
         'Info',
         `全${polygonFeatures.length}個のうち${addedCount}個の圃場を登録しました`,
       )
     } else {
-      store.setMessage('Error', `ポリゴン登録上限（${maxFeatures}筆）に達してます`)
+      notificationStore.showAlert('Error', `ポリゴン登録上限（${maxFeatures}筆）に達してます`)
       return
     }
 
