@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import StepStatusHeader from './components/StepStatusHeader.vue'
 import InputNumberDialog from './components/InputNumberDialog.vue'
 import { useControlScreenWidth } from '@/components/common/composables/useControlScreenWidth'
+import { ArrowPathIcon, PlusIcon, MinusIcon } from '@heroicons/vue/24/outline'
 
-import type { DialogType } from '@/types/common.type'
+import type { DialogType, GridOrigin } from '@/types/common.type'
 
 const currentDialogName = ref<DialogType>('')
 
@@ -13,6 +14,7 @@ const gridRotationAngle = defineModel('gridRotationAngle')
 const gridEW = defineModel('gridEW')
 const gridNS = defineModel('gridNS')
 const buffer = defineModel('buffer')
+const gridOrigin = defineModel<GridOrigin>('gridOrigin')
 
 interface Props {
   gridCountProp: number
@@ -31,6 +33,26 @@ const gridParams = {
 // ボタン入力ダイアログを表示
 const onClickDialog = (dialogName: DialogType) => {
   currentDialogName.value = dialogName
+}
+
+// Toggle grid origin between NW and SE
+const toggleGridOrigin = () => {
+  gridOrigin.value = gridOrigin.value === 'NW' ? 'SE' : 'NW'
+}
+
+// Micro rotation step (0.1度刻み)
+const ROTATION_STEP = 0.1
+
+const incrementRotation = () => {
+  const current = Number(gridRotationAngle.value) || 0
+  const newValue = Math.min(current + ROTATION_STEP, gridParams.rotationAngle.max)
+  gridRotationAngle.value = Math.round(newValue * 10) / 10 // Round to 1 decimal
+}
+
+const decrementRotation = () => {
+  const current = Number(gridRotationAngle.value) || 0
+  const newValue = Math.max(current - ROTATION_STEP, gridParams.rotationAngle.min)
+  gridRotationAngle.value = Math.round(newValue * 10) / 10 // Round to 1 decimal
 }
 
 // Step3に進む
@@ -65,6 +87,7 @@ const returnStep1 = () => {
       >
         <label class="">回転角度(°)</label>
         <input
+          v-show="isDesktop"
           :class="[
             currentDialogName === 'rotationAngle' ? ' bg-amber-300' : 'bg-white',
             'w-10 mr-1 rounded-md border',
@@ -74,7 +97,6 @@ const returnStep1 = () => {
           v-model="gridRotationAngle"
         />
         <input
-          v-show="isDesktop"
           class="w-14 lg:w-full"
           type="range"
           :min="gridParams.rotationAngle.min"
@@ -139,7 +161,52 @@ const returnStep1 = () => {
           v-model="buffer"
         />
       </div>
-      <div class="grid grid-cols-2 gap-3 col-span-2 lg:col-span-1 justify-center my-4">
+
+      <div
+        :class="[
+          isDesktop ? 'my-4' : 'my-2',
+          'grid grid-cols-2 gap-4 p-2 rounded-md bg-slate-50 text-slate-500 border border-slate-300',
+        ]"
+      >
+        <div>
+          <label class="block w-full text-xs text-center mb-1">グリッドの反転</label>
+          <div class="flex justify-center">
+            <button
+              @click="toggleGridOrigin"
+              class="p-1.5 rounded-full ring-1 ring-inset ring-gray-300 bg-white hover:bg-slate-50"
+              title="端数位置を反転"
+            >
+              <ArrowPathIcon class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block w-full text-xs text-center mb-1">グリッドの微回転</label>
+          <div class="flex justify-center gap-3">
+            <button
+              @click="decrementRotation"
+              class="p-1.5 rounded-full ring-1 ring-inset ring-gray-300 bg-white hover:bg-slate-50"
+              title="-0.1°"
+            >
+              <MinusIcon class="w-4 h-4" />
+            </button>
+            <button
+              @click="incrementRotation"
+              class="p-1.5 rounded-full ring-1 ring-inset ring-gray-300 bg-white hover:bg-slate-50"
+              title="+0.1°"
+            >
+              <PlusIcon class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        :class="[
+          isDesktop ? 'my-4' : 'my-2',
+          'grid grid-cols-2 gap-3 col-span-2 lg:col-span-1 justify-center',
+        ]"
+      >
         <button
           class="p-2 rounded-md bg-white ring-1 ring-inset ring-gray-300"
           @click="returnStep1"

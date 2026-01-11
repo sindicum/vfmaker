@@ -13,3 +13,6 @@ export type AlertType = 'Info' | 'Error' | 'Warning' | 'Success'
 
 // 汎用的なステータス型
 export type Status = 'pending' | 'loading' | 'success' | 'error'
+
+// グリッド起点タイプ
+export type GridOrigin = 'NW' | 'SE'
