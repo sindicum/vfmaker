@@ -40,18 +40,19 @@ const toggleGridOrigin = () => {
   gridOrigin.value = gridOrigin.value === 'NW' ? 'SE' : 'NW'
 }
 
-// Micro rotation step (0.1度刻み)
-const ROTATION_STEP = 0.1
+// Micro rotation step options
+const rotationStepOptions = [0.1, 0.2, 0.5]
+const selectedRotationStep = ref(0.1)
 
 const incrementRotation = () => {
   const current = Number(gridRotationAngle.value) || 0
-  const newValue = Math.min(current + ROTATION_STEP, gridParams.rotationAngle.max)
+  const newValue = Math.min(current + selectedRotationStep.value, gridParams.rotationAngle.max)
   gridRotationAngle.value = Math.round(newValue * 10) / 10 // Round to 1 decimal
 }
 
 const decrementRotation = () => {
   const current = Number(gridRotationAngle.value) || 0
-  const newValue = Math.max(current - ROTATION_STEP, gridParams.rotationAngle.min)
+  const newValue = Math.max(current - selectedRotationStep.value, gridParams.rotationAngle.min)
   gridRotationAngle.value = Math.round(newValue * 10) / 10 // Round to 1 decimal
 }
 
@@ -182,21 +183,29 @@ const returnStep1 = () => {
         </div>
         <div>
           <label class="block w-full text-xs text-center mb-1">グリッドの微回転</label>
-          <div class="flex justify-center gap-3">
+          <div class="flex justify-center items-center gap-1">
             <button
               @click="decrementRotation"
               class="p-1.5 rounded-full ring-1 ring-inset ring-gray-300 bg-white hover:bg-slate-50"
-              title="-0.1°"
+              :title="`-${selectedRotationStep}°`"
             >
               <MinusIcon class="w-4 h-4" />
             </button>
             <button
               @click="incrementRotation"
               class="p-1.5 rounded-full ring-1 ring-inset ring-gray-300 bg-white hover:bg-slate-50"
-              title="+0.1°"
+              :title="`+${selectedRotationStep}°`"
             >
               <PlusIcon class="w-4 h-4" />
             </button>
+            <select
+              v-model="selectedRotationStep"
+              class="text-xs px-1 py-1 rounded border border-gray-300 bg-white"
+            >
+              <option v-for="step in rotationStepOptions" :key="step" :value="step">
+                {{ step }}°
+              </option>
+            </select>
           </div>
         </div>
       </div>
