@@ -20,32 +20,35 @@ export type GridGenerationResult = {
 }
 
 /**
- * 圃場ポリゴンの形状に最適なBoundingBoxの回転角度を算出
+ * 最小外接矩形（MBR）を与える回転角度を三分探索で求める
  * @param geom 対象のFeature
  * @returns 最適な回転角度（0-90度）
  */
 export function fitRotatedBboxDeg(geom: Feature): number {
-  let minDeg = 0
-  let minArea = 0
-
   const centroid = turfCentroid(turfBboxPolygon(turfBbox(geom)))
 
-  for (let deg = 0; deg <= 90; deg++) {
-    const rotatedTargetPolygon = turfTransformRotate(geom, deg, { pivot: centroid })
-    const rotatedTargetPolygonBbox = turfBbox(rotatedTargetPolygon)
-    const rotatedTargetPolygonBboxPolygon: Feature = turfBboxPolygon(rotatedTargetPolygonBbox)
+  const calcBBoxArea = (deg: number): number => {
+    const rotated = turfTransformRotate(geom, deg, { pivot: centroid })
+    return turfArea(turfBboxPolygon(turfBbox(rotated)))
+  }
 
-    if (deg === 0) {
-      minArea = turfArea(rotatedTargetPolygonBboxPolygon)
+  let lo = 0
+  let hi = 90
+  const epsilon = 0.1 // 精度（度）
+
+  // 三分探索：O(log n) で最小値を探索
+  while (hi - lo > epsilon) {
+    const mid1 = lo + (hi - lo) / 3
+    const mid2 = hi - (hi - lo) / 3
+
+    if (calcBBoxArea(mid1) < calcBBoxArea(mid2)) {
+      hi = mid2
     } else {
-      if (minArea > turfArea(rotatedTargetPolygonBboxPolygon)) {
-        minDeg = deg
-        minArea = turfArea(rotatedTargetPolygonBboxPolygon)
-      }
+      lo = mid1
     }
   }
 
-  return minDeg
+  return Math.round(((lo + hi) / 2) * 10) / 10
 }
 
 /**
