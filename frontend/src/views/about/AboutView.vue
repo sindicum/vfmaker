@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import SiteDevelopmentNoteComp from './SiteDevelopmentNoteComp.vue'
 import SiteUsageNoteComp from './SiteUsageNoteComp.vue'
 import SiteUsageMovieComp from './SiteUsageMovieComp.vue'
+import DistributionLogicComp from './DistributionLogicComp.vue'
 import InitializeDialog from './components/InitializeDialog.vue'
 import { Cog8ToothIcon } from '@heroicons/vue/24/solid'
 import { useErrorLogStore } from '@/errors'
@@ -51,6 +52,8 @@ const handleResetConfirm = (confirmed: boolean) => {
       <SiteUsageNoteComp />
       <hr class="border-t-2 border-slate-200 w-full lg:w-5xl" />
       <SiteUsageMovieComp />
+      <hr class="border-t-2 border-slate-200 w-full lg:w-5xl" />
+      <DistributionLogicComp />
       <hr class="border-t-2 border-slate-200 w-full lg:w-5xl" />
       <SiteDevelopmentNoteComp />
     </div>
