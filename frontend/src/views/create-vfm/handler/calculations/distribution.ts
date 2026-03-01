@@ -96,9 +96,18 @@ export function distributeFertilizerRateStepless(
   }
 
   // Step 4: 面積加重平均を引いて調整
-  const adjustedWeights = baseWeights.map((w) => w - weightedSum)
+  let adjustedWeights = baseWeights.map((w) => w - weightedSum)
 
-  // Step 5: 結果をMapに格納
+  // Step 5: maxRange制約のスケーリング
+  // 面積加重調整により|weight|がmaxRangeを超える場合、全体を縮小
+  // スケーリングはゼロ和を維持（k × 0 = 0）
+  const maxAbsWeight = Math.max(...adjustedWeights.map(Math.abs))
+  if (maxAbsWeight > maxRange) {
+    const scale = maxRange / maxAbsWeight
+    adjustedWeights = adjustedWeights.map((w) => w * scale)
+  }
+
+  // Step 6: 結果をMapに格納
   sorted.forEach((humusValue, idx) => {
     result.set(humusValue, Number(adjustedWeights[idx].toFixed(10)))
   })
