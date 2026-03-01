@@ -28,6 +28,7 @@ trial*
 .env.production
 frontend/public/*
 temp
+.claude
 CLAUDE.md
 *.drawio
 
