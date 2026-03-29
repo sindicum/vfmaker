@@ -9,17 +9,19 @@ permissions:
 
 env:
   VITE_API_URL: ${{ vars.VITE_API_URL }}
+  VITE_API_ISOXML_URL: ${{ vars.VITE_API_ISOXML_URL }}
+  VITE_API_GEOTIFF_URL: ${{ vars.VITE_API_GEOTIFF_URL }}
   VITE_PMTILES_URL: ${{ vars.VITE_PMTILES_URL }}
   VITE_OM_MAP_URL: ${{ vars.VITE_OM_MAP_URL }}
   VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
   VITE_AWS_APIGATEWAY_KEY: ${{ secrets.VITE_AWS_APIGATEWAY_KEY }}
-  VITE_GA4_ID: ${{ secrets.VITE_GA4_ID }}
   ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
   BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
   AWS_ROLE: ${{ secrets.AWS_ROLE }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
   VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+  VITE_GA4_ID: ${{ secrets.VITE_GA4_ID }}
 
 jobs:
   build-and-deploy:
