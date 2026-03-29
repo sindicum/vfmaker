@@ -19,6 +19,7 @@ env:
   BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
   AWS_ROLE: ${{ secrets.AWS_ROLE }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
 
 jobs:
   build-and-deploy:

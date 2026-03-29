@@ -3,6 +3,7 @@ import './assets/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+import * as Sentry from '@sentry/vue'
 
 import App from './App.vue'
 import router from './router'
@@ -37,6 +38,18 @@ export function createVfmApp() {
   const pinia = createPinia()
 
   pinia.use(piniaPluginPersistedstate)
+
+  // Sentry 初期化（本番環境のみ）
+  if (import.meta.env.PROD) {
+    Sentry.init({
+      app,
+      dsn: import.meta.env.VITE_SENTRY_DSN,
+      integrations: [Sentry.browserTracingIntegration({ router })],
+      sendDefaultPii: true,
+      tracesSampleRate: 1.0,
+      environment: import.meta.env.MODE,
+    })
+  }
 
   app.use(pinia)
   app.use(router)
