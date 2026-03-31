@@ -64,7 +64,7 @@ jobs:
     # Install dependencies required for CodeQL to resolve imports in Python files.
     - name: Install Python dependencies
       if: matrix.language == 'python'
-      run: pip install boto3
+      run: pip install boto3 pyshp
       
     # Add any setup steps before running the `github/codeql-action/init` action.
     # This includes steps like installing compilers or runtimes (`actions/setup-node`
