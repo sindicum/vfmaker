@@ -52,7 +52,6 @@ def lambda_handler(event, context):
         for feature in geojson["features"]:
             coords = feature["geometry"]["coordinates"]
             applicationAmount = int(feature["properties"].get("amount_fertilization_unit", 0) * 10)
-e
             w.poly(reversed_coords)
             w.record(applicationAmount)
 
@@ -104,7 +103,7 @@ e
         print(f"Error: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'message': 'Internal server error', 'error': str(e)}),
+            'body': json.dumps({'message': 'Internal server error'}),
             'headers': {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
