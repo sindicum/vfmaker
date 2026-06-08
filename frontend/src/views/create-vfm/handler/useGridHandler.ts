@@ -45,8 +45,8 @@ export function useGridHandler(map: MapLibreMapRef) {
 
   // グリッド設定
   const gridRotationAngle = ref<number | null>(null)
-  const gridEW = ref<number>(20)
-  const gridNS = ref<number>(20)
+  const gridEW = ref<number>(10)
+  const gridNS = ref<number>(10)
   const buffer = ref<number>(0)
   const gridOrigin = ref<GridOrigin>('NW')
   const gridCount = ref<number>(0)
